@@ -9,7 +9,7 @@
 # por eso se modelan como clases explícitas y no como link tables simples.
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-
+from datetime import datetime,timezone
 if TYPE_CHECKING:
     from app.modules.categoria.models import Categoria
     from app.modules.ingrediente.models import Ingrediente
@@ -18,13 +18,9 @@ if TYPE_CHECKING:
 # ── Tabla pivot: Producto ↔ Categoria ─────────────────────────────────────────
 
 class ProductoCategoria(SQLModel, table=True):
-    """
-    Tabla pivot N:M entre Producto y Categoria.
-    PK compuesta: (producto_id, categoria_id).
-    Atributo extra: es_principal indica la categoría principal del producto.
-    """
+   
 
-    __tablename__ = "producto_categorias"
+    __tablename__ = "producto_categoria"
 
     producto_id: int = Field(
         foreign_key="productos.id",
@@ -35,24 +31,22 @@ class ProductoCategoria(SQLModel, table=True):
         primary_key=True,
     )
     es_principal: bool = Field(default=False)
-
-    # Relationships hacia los extremos
+    
+    # Auditoria
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    # Relationship
     producto: Optional["Producto"] = Relationship(back_populates="categorias_link")
     categoria: Optional["Categoria"] = Relationship(back_populates="productos_link")
 
 
-# ── Tabla pivot: Producto ↔ Ingrediente ───────────────────────────────────────
+# ── Tabla pivot: Producto ↔ Ingrediente ───
 
 class ProductoIngrediente(SQLModel, table=True):
-    """
-    Tabla pivot N:M entre Producto e Ingrediente.
-    PK compuesta: (producto_id, ingrediente_id).
-    Atributos extra:
-      - es_removible: el cliente puede pedir que se retire
-      - es_opcional:  no viene por defecto pero se puede agregar
-    """
+    
+    
 
-    __tablename__ = "producto_ingredientes"
+    __tablename__ = "producto_ingrediente"
 
     producto_id: int = Field(
         foreign_key="productos.id",
@@ -63,23 +57,19 @@ class ProductoIngrediente(SQLModel, table=True):
         primary_key=True,
     )
     es_removible: bool = Field(default=False)
-    es_opcional: bool = Field(default=False)
+    
 
-    # Relationships hacia los extremos
+    # Relationships 
     producto: Optional["Producto"] = Relationship(back_populates="ingredientes_link")
     ingrediente: Optional["Ingrediente"] = Relationship(back_populates="productos_link")
 
 
-# ── Tabla principal: Producto ─────────────────────────────────────────────────
+# ── Tabla principal: Producto ──
 
 class Producto(SQLModel, table=True):
-    """
-    Tabla productos.
-    Se relaciona con Categoria (N:M via ProductoCategoria)
-    y con Ingrediente (N:M via ProductoIngrediente).
-    """
+    
 
-    __tablename__ = "productos"
+    __tablename__ = "producto"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(min_length=2, max_length=150)
@@ -87,8 +77,13 @@ class Producto(SQLModel, table=True):
     precio_base: float = Field(ge=0)
     tiempo_prep_min: Optional[int] = Field(default=None, ge=0)
     disponible: bool = Field(default=True)
-
-    # Relationships hacia las tablas pivot
+    
+    # Auditorias
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deleted_at: Optional[datetime] = Field(default=None)
+    
+    # Relationships 
     categorias_link: List[ProductoCategoria] = Relationship(
         back_populates="producto"
     )

@@ -1,5 +1,5 @@
 # app/modules/producto/router.py
-from typing import Annotated
+from typing import Annotated,Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
@@ -44,17 +44,15 @@ def create_producto(
     return svc.create(data)
 
 
-@router.get(
-    "/",
-    response_model=ProductoList,
-    summary="Listar productos (paginado)",
-)
+@router.get("/", response_model=ProductoList, summary="Listar productos (paginado, filtrable)")
 def list_productos(
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de resultados")] = 20,
+    disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
+    nombre: Annotated[Optional[str], Query(min_length=1, description="Buscar por nombre")] = None,
     svc: ProductoService = Depends(get_producto_service),
 ) -> ProductoList:
-    return svc.get_all(offset=offset, limit=limit)
+    return svc.get_all(offset=offset, limit=limit, disponible=disponible, nombre=nombre)
 
 
 @router.get(

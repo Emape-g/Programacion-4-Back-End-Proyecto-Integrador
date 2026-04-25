@@ -6,7 +6,7 @@ from app.modules.ingrediente.repository import IngredienteRepository
 
 
 class IngredienteUnitOfWork(UnitOfWork):
-    """UoW específico del módulo Ingrediente."""
+    
 
     def __init__(self, session: Session) -> None:
         super().__init__(session)

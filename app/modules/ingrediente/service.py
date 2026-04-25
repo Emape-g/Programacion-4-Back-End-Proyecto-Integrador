@@ -1,7 +1,7 @@
 # app/modules/ingrediente/service.py
 from fastapi import HTTPException, status
 from sqlmodel import Session
-
+from datetime import datetime, timezone
 from app.modules.ingrediente.models import Ingrediente
 from app.modules.ingrediente.schemas import (
     IngredienteCreate,
@@ -78,6 +78,7 @@ class IngredienteService:
             for field, value in patch.items():
                 setattr(ing, field, value)
 
+            ing.updated_at = datetime.now(timezone.utc)
             uow.ingredientes.add(ing)
             result = IngredientePublic.model_validate(ing)
         return result

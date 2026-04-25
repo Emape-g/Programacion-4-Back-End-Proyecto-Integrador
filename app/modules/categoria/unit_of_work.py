@@ -6,15 +6,7 @@ from app.modules.categoria.repository import CategoriaRepository
 
 
 class CategoriaUnitOfWork(UnitOfWork):
-    """
-    UoW específico del módulo Categoria.
-    Expone el repositorio necesario para el servicio.
-
-    Uso típico:
-        with CategoriaUnitOfWork(session) as uow:
-            cat = Categoria(...)
-            uow.categorias.add(cat)
-    """
+    
 
     def __init__(self, session: Session) -> None:
         super().__init__(session)

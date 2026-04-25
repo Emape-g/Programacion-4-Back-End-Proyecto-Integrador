@@ -1,7 +1,7 @@
 # app/modules/ingrediente/models.py
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-
+from datetime import datetime,timezone
 if TYPE_CHECKING:
     from app.modules.producto.models import ProductoIngrediente
 
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 class Ingrediente(SQLModel, table=True):
     """Tabla ingredientes — catálogo global, no duplicado por producto."""
 
-    __tablename__ = "ingredientes"
+    __tablename__ = "ingrediente"
 
     id: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field(min_length=2, max_length=100, unique=True)
@@ -20,3 +20,7 @@ class Ingrediente(SQLModel, table=True):
     productos_link: List["ProductoIngrediente"] = Relationship(
         back_populates="ingrediente"
     )
+    
+    #Auditoria
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

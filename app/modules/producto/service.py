@@ -1,7 +1,8 @@
 # app/modules/producto/service.py
+from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
-
+from datetime import datetime, timezone
 from app.modules.producto.models import Producto, ProductoCategoria, ProductoIngrediente
 from app.modules.producto.schemas import (
     ProductoCreate,
@@ -18,15 +19,7 @@ from app.modules.producto.unit_of_work import ProductoUnitOfWork
 
 
 class ProductoService:
-    """
-    Capa de lógica de negocio para Producto.
-
-    Responsabilidades:
-    - Validar existencia de Categoria e Ingrediente antes de vincular
-    - Evitar vínculos duplicados en las tablas pivot
-    - Coordinar múltiples repositorios en una sola transacción via UoW
-    - NUNCA acceder directamente a la Session
-    """
+    
 
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -61,11 +54,7 @@ class ProductoService:
     def _build_detalle(
         self, uow: ProductoUnitOfWork, producto: Producto
     ) -> ProductoDetalle:
-        """
-        Construye el DTO de detalle leyendo los pivots.
-        Debe llamarse DENTRO del bloque `with uow:` para evitar
-        que SQLAlchemy expire los atributos tras el commit.
-        """
+       
         cats = uow.producto_categorias.get_by_producto(producto.id)
         ings = uow.producto_ingredientes.get_by_producto(producto.id)
 
@@ -89,7 +78,7 @@ class ProductoService:
                     ingrediente_id=i.ingrediente_id,
                     nombre_ingrediente=uow.ingredientes.get_by_id(i.ingrediente_id).nombre,
                     es_removible=i.es_removible,
-                    es_opcional=i.es_opcional,
+                    
                 )
                 for i in ings
             ],
@@ -98,15 +87,7 @@ class ProductoService:
     # ── Casos de uso ──────────────────────────────────────────────────────────
 
     def create(self, data: ProductoCreate) -> ProductoDetalle:
-        """
-        Crea un producto y vincula categorías e ingredientes en una sola transacción.
-
-        Flujo:
-        1. Valida todas las categorías e ingredientes referenciados
-        2. Persiste el Producto (flush para obtener ID)
-        3. Crea los registros pivot ProductoCategoria y ProductoIngrediente
-        4. Serializa antes del commit
-        """
+        
         with ProductoUnitOfWork(self._session) as uow:
             # Validar FKs antes de insertar
             for cat in data.categorias:
@@ -138,17 +119,16 @@ class ProductoService:
                     producto_id=producto.id,
                     ingrediente_id=ing.ingrediente_id,
                     es_removible=ing.es_removible,
-                    es_opcional=ing.es_opcional,
+                    
                 )
                 uow.producto_ingredientes.add(link_i)
 
             result = self._build_detalle(uow, producto)
         return result
 
-    def get_all(self, offset: int = 0, limit: int = 20) -> ProductoList:
-        """Lista paginada de todos los productos."""
+    def get_all(self, offset: int = 0, limit: int = 20, disponible: Optional[bool] = None, nombre: Optional[str] = None) -> ProductoList:
         with ProductoUnitOfWork(self._session) as uow:
-            items = uow.productos.get_all(offset=offset, limit=limit)
+            items = uow.productos.get_all_filtered(offset=offset, limit=limit, disponible=disponible, nombre=nombre)
             total = uow.productos.count()
             result = ProductoList(
                 data=[ProductoPublic.model_validate(p) for p in items],
@@ -171,7 +151,8 @@ class ProductoService:
             patch = data.model_dump(exclude_unset=True)
             for field, value in patch.items():
                 setattr(producto, field, value)
-
+                
+            producto.updated_at = datetime.now(timezone.utc)
             uow.productos.add(producto)
             result = self._build_detalle(uow, producto)
         return result
@@ -239,7 +220,7 @@ class ProductoService:
                 producto_id=producto_id,
                 ingrediente_id=data.ingrediente_id,
                 es_removible=data.es_removible,
-                es_opcional=data.es_opcional,
+                
             )
             uow.producto_ingredientes.add(link)
             result = self._build_detalle(uow, producto)
