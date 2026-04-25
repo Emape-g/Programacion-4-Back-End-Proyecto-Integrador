@@ -12,14 +12,14 @@ if TYPE_CHECKING:
 class Categoria(SQLModel, table=True):
     
 
-    __tablename__ = "categorias"
+    __tablename__ = "categoria"
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
     # Auto-referencia: categoría padre (NULL = raíz)
     padre_id: Optional[int] = Field(
         default=None,
-        foreign_key="categorias.id",
+        foreign_key="categoria.id",
         description="Autoreferencial categoria",
     )
 
@@ -37,19 +37,3 @@ class Categoria(SQLModel, table=True):
         back_populates="categoria"
     )
     
-    # Relationship Reflexive
-    subcategoria: List["Categoria"] = Relationship(
-        back_populates='categoria_padre',
-        sa_relationship_kwargs={
-            'foreign_keys': '[Categoria.padre_id]', # <- Corregido
-            'lazy': 'selectin',
-        },
-    )
-    
-    categoria_padre: Optional["Categoria"] = Relationship(
-        back_populates='subcategoria',
-        sa_relationship_kwargs={
-            'foreign_keys': '[Categoria.padre_id]', # <- Corregido
-            'remote_side': 'Categoria.id',          # <- Corregido
-        },
-    )

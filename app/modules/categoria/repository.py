@@ -17,11 +17,6 @@ class CategoriaRepository(BaseRepository[Categoria]):
         return self.session.exec(
             select(Categoria).where(Categoria.nombre == nombre)
         ).first()
-    
-    def get_tree(self) -> list[dict]:
-        result = self.session.exec(
-            
-        )
 
     def get_all_paginated(
         self, offset: int = 0, limit: int = 20

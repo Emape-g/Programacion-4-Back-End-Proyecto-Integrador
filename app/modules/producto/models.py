@@ -27,7 +27,7 @@ class ProductoCategoria(SQLModel, table=True):
         primary_key=True,
     )
     categoria_id: int = Field(
-        foreign_key="categorias.id",
+        foreign_key="categoria.id",
         primary_key=True,
     )
     es_principal: bool = Field(default=False)
@@ -49,11 +49,11 @@ class ProductoIngrediente(SQLModel, table=True):
     __tablename__ = "producto_ingrediente"
 
     producto_id: int = Field(
-        foreign_key="productos.id",
+        foreign_key="producto.id",
         primary_key=True,
     )
     ingrediente_id: int = Field(
-        foreign_key="ingredientes.id",
+        foreign_key="ingrediente.id",
         primary_key=True,
     )
     es_removible: bool = Field(default=False)

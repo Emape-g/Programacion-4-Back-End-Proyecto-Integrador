@@ -15,10 +15,9 @@ class ProductoCategoriaAdd(SQLModel):
 
 
 class ProductoIngredienteAdd(SQLModel):
-    
+
     ingrediente_id: int
     es_removible: bool = False
-    es_opcional: bool = False
 
 
 # ── Schemas de pivot (salida) ───
