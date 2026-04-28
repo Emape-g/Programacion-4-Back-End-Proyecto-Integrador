@@ -5,7 +5,8 @@ from app.core.database import create_db_and_tables
 from app.modules.categoria.router import router as categoria_router
 from app.modules.ingrediente.router import router as ingrediente_router
 from app.modules.producto.router import router as producto_router
-
+from app.core.config import settings
+print(settings.DATABASE_URL)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

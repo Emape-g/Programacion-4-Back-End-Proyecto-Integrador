@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, Session, create_engine
 from app.core.config import settings
 
-engine = create_engine(settings.DATABASE_URL, echo=False)
+engine = create_engine(settings.DATABASE_URL, echo=False, connect_args={"client_encoding": "utf8"})
 
 
 def create_db_and_tables() -> None:
