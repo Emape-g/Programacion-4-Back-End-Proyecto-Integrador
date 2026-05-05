@@ -86,4 +86,11 @@ class IngredienteService:
     def delete(self, ingrediente_id: int) -> None:
         with IngredienteUnitOfWork(self._session) as uow:
             ing = self._get_or_404(uow, ingrediente_id)
-            uow.ingredientes.delete(ing)
+            uow.ingredientes.soft_delete(ing)
+
+    def activate(self, ingrediente_id: int) -> IngredientePublic:
+        with IngredienteUnitOfWork(self._session) as uow:
+            ing = self._get_or_404(uow, ingrediente_id)
+            uow.ingredientes.activate(ing)
+            result = IngredientePublic.model_validate(ing)
+        return result

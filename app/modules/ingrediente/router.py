@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
+from app.core.auth import require_admin
 from app.core.database import get_session
 from app.modules.ingrediente.schemas import (
     IngredienteCreate,
@@ -29,6 +30,7 @@ def get_ingrediente_service(
     response_model=IngredientePublic,
     status_code=status.HTTP_201_CREATED,
     summary="Crear ingrediente",
+    dependencies=[Depends(require_admin)],
 )
 def create_ingrediente(
     data: IngredienteCreate,
@@ -42,6 +44,7 @@ def create_ingrediente(
     "/",
     response_model=IngredienteList,
     summary="Listar ingredientes (paginado)",
+    dependencies=[Depends(require_admin)],
 )
 def list_ingredientes(
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
@@ -55,6 +58,7 @@ def list_ingredientes(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
     summary="Obtener ingrediente por ID",
+    dependencies=[Depends(require_admin)],
 )
 def get_ingrediente(
     ingrediente_id: int,
@@ -67,6 +71,7 @@ def get_ingrediente(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
     summary="Actualización parcial de ingrediente",
+    dependencies=[Depends(require_admin)],
 )
 def update_ingrediente(
     ingrediente_id: int,
@@ -79,10 +84,24 @@ def update_ingrediente(
 @router.delete(
     "/{ingrediente_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Eliminar ingrediente",
+    summary="Baja lógica de ingrediente",
+    dependencies=[Depends(require_admin)],
 )
 def delete_ingrediente(
     ingrediente_id: int,
     svc: IngredienteService = Depends(get_ingrediente_service),
 ) -> None:
     svc.delete(ingrediente_id)
+
+
+@router.patch(
+    "/{ingrediente_id}/activar",
+    response_model=IngredientePublic,
+    summary="Reactivar ingrediente dado de baja",
+    dependencies=[Depends(require_admin)],
+)
+def activate_ingrediente(
+    ingrediente_id: int,
+    svc: IngredienteService = Depends(get_ingrediente_service),
+) -> IngredientePublic:
+    return svc.activate(ingrediente_id)

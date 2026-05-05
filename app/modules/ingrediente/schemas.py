@@ -22,13 +22,14 @@ class IngredienteUpdate(SQLModel):
 # ── Salida ────────────────────────────────────────────────────────────────────
 
 class IngredientePublic(SQLModel):
-    
+
     id: int
     nombre: str
     descripcion: Optional[str] = None
     es_alergeno: bool
     created_at: datetime
     updated_at: datetime
+    delete_at: Optional[datetime] = None
 
 
 class IngredienteList(SQLModel):

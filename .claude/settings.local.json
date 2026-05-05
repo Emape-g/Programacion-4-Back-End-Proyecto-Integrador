@@ -11,7 +11,12 @@
       "Bash(env)",
       "Bash(pip show *)",
       "Bash(./venv/Scripts/python.exe *)",
-      "Bash(./venv/Scripts/pip.exe install *)"
+      "Bash(./venv/Scripts/pip.exe install *)",
+      "Bash(Get-ChildItem -Path C:\\\\Facultad\\\\Prog4\\\\integrador -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(pip install *)",
+      "Bash(pip uninstall *)"
     ]
   }
 }

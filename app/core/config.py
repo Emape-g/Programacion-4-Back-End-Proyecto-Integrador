@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
 
+    jwt_secret_key: str = "changeme-secret-key"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
