@@ -1,4 +1,5 @@
 # app/modules/producto/repository.py
+from datetime import datetime, timezone
 from typing import Sequence, Optional
 from sqlmodel import Session, select, func
 
@@ -24,7 +25,13 @@ class ProductoRepository(BaseRepository[Producto]):
     def count(self) -> int:
         return self.session.exec(select(func.count(Producto.id))).one()
     
-    def get_all_filtered(self, offset: int = 0, limit: int = 20,disponible: Optional[bool] = None,nombre: Optional[str] = None,) -> Sequence[Producto]:
+    def soft_delete(self, instance: Producto) -> Producto:
+        instance.deleted_at = datetime.now(timezone.utc)
+        self.session.add(instance)
+        self.session.flush()
+        return instance
+
+    def get_all_filtered(self, offset: int = 0, limit: int = 20, disponible: Optional[bool] = None, nombre: Optional[str] = None) -> Sequence[Producto]:
         query = select(Producto)
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)

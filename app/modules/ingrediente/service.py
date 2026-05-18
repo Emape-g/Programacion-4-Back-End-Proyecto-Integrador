@@ -1,4 +1,5 @@
 # app/modules/ingrediente/service.py
+from typing import Literal, Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 from datetime import datetime, timezone
@@ -51,10 +52,16 @@ class IngredienteService:
             result = IngredientePublic.model_validate(ing)
         return result
 
-    def get_all(self, offset: int = 0, limit: int = 20) -> IngredienteList:
+    def get_all(
+        self,
+        offset: int = 0,
+        limit: int = 20,
+        nombre: Optional[str] = None,
+        orden: Literal["asc", "desc"] = "desc",
+    ) -> IngredienteList:
         with IngredienteUnitOfWork(self._session) as uow:
-            items = uow.ingredientes.get_all(offset=offset, limit=limit)
-            total = uow.ingredientes.count()
+            items = uow.ingredientes.get_all(offset=offset, limit=limit, nombre=nombre, orden=orden)
+            total = uow.ingredientes.count(nombre=nombre)
             result = IngredienteList(
                 data=[IngredientePublic.model_validate(i) for i in items],
                 total=total,

@@ -1,5 +1,5 @@
 # app/modules/ingrediente/router.py
-from typing import Annotated
+from typing import Annotated, Literal, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
@@ -43,15 +43,17 @@ def create_ingrediente(
 @router.get(
     "/",
     response_model=IngredienteList,
-    summary="Listar ingredientes (paginado)",
+    summary="Listar ingredientes (paginado, filtrable)",
     dependencies=[Depends(require_admin)],
 )
 def list_ingredientes(
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
     limit: Annotated[int, Query(ge=1, le=100, description="Máximo de resultados")] = 20,
+    nombre: Annotated[Optional[str], Query(min_length=1, description="Buscar por nombre")] = None,
+    orden: Annotated[Literal["asc", "desc"], Query(description="Orden por fecha de creación")] = "desc",
     svc: IngredienteService = Depends(get_ingrediente_service),
 ) -> IngredienteList:
-    return svc.get_all(offset=offset, limit=limit)
+    return svc.get_all(offset=offset, limit=limit, nombre=nombre, orden=orden)
 
 
 @router.get(

@@ -158,10 +158,9 @@ class ProductoService:
         return result
 
     def delete(self, producto_id: int) -> None:
-        """Elimina el producto (los pivots se eliminan por CASCADE en la DB)."""
         with ProductoUnitOfWork(self._session) as uow:
             producto = self._get_or_404(uow, producto_id)
-            uow.productos.delete(producto)
+            uow.productos.soft_delete(producto)
 
     # ── Gestión de relaciones N:M ─────────────────────────────────────────────
 
