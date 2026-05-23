@@ -103,7 +103,9 @@ class PedidoService:
                         detail=f"Producto '{producto.nombre}' no está disponible",
                     )
 
-                precio = producto.precio_base
+                # producto.precio_base es Decimal; pedido aún opera en float
+                # (pendiente migrar Pedido a Decimal junto al SVG del dominio 3).
+                precio = float(producto.precio_base)
                 sub = round(precio * item.cantidad, 2)
                 subtotal += sub
 

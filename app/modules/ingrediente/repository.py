@@ -48,13 +48,13 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         return self.session.exec(query).one()
 
     def soft_delete(self, instance: Ingrediente) -> Ingrediente:
-        instance.delete_at = datetime.now(timezone.utc)
+        instance.deleted_at = datetime.now(timezone.utc)
         self.session.add(instance)
         self.session.flush()
         return instance
 
     def activate(self, instance: Ingrediente) -> Ingrediente:
-        instance.delete_at = None
+        instance.deleted_at = None
         self.session.add(instance)
         self.session.flush()
         return instance
