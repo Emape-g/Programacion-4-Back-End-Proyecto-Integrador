@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "changeme-secret-key"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
 
     @computed_field
     @property
