@@ -6,7 +6,13 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.database import create_db_and_tables, engine
-from app.db.seed import seed_admin_usuario, seed_roles, seed_unidades_medida
+from app.db.seed import (
+    seed_admin_usuario,
+    seed_estados_pedido,
+    seed_formas_pago,
+    seed_roles,
+    seed_unidades_medida,
+)
 
 # Importar todos los modelos antes de create_all para que SQLModel.metadata
 # los registre y resuelva las relationships con strings.
@@ -41,6 +47,8 @@ async def lifespan(app: FastAPI):
     with Session(engine) as session:
         seed_roles(session)
         seed_unidades_medida(session)
+        seed_formas_pago(session)
+        seed_estados_pedido(session)
         seed_admin_usuario(session)
     yield
 

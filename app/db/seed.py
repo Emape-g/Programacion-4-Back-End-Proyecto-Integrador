@@ -1,6 +1,8 @@
 from sqlmodel import Session, select
 
 from app.core.security import hash_password
+from app.modules.estado_pedido.models import EstadoPedido
+from app.modules.forma_de_pago.models import FormaDePago
 from app.modules.rol.models import Rol
 from app.modules.unidad_medida.models import UnidadMedida
 from app.modules.usuario.models import Usuario, UsuarioRol
@@ -72,6 +74,57 @@ def seed_unidades_medida(session: Session) -> None:
         ).first()
         if not existente:
             session.add(UnidadMedida(nombre=nombre, simbolo=simbolo, tipo=tipo))
+            changed = True
+    if changed:
+        session.commit()
+
+
+FORMAS_PAGO_SEED: list[tuple[str, str, bool]] = [
+    ("MERCADOPAGO",   "Mercado Pago — Checkout API · CardPayment SDK", True),
+    ("EFECTIVO",      "Efectivo — retiro en local (direccion_id=NULL)", True),
+    ("TRANSFERENCIA", "Transferencia bancaria",                         True),
+]
+
+
+def seed_formas_pago(session: Session) -> None:
+    changed = False
+    for codigo, descripcion, habilitado in FORMAS_PAGO_SEED:
+        if not session.get(FormaDePago, codigo):
+            session.add(
+                FormaDePago(
+                    codigo=codigo,
+                    descripcion=descripcion,
+                    habilitado=habilitado,
+                )
+            )
+            changed = True
+    if changed:
+        session.commit()
+
+
+# (codigo, descripcion, orden, es_terminal) — FSM del Dominio 3
+ESTADOS_PEDIDO_SEED: list[tuple[str, str, int, bool]] = [
+    ("PENDIENTE",  "Pendiente de confirmación",  1, False),
+    ("CONFIRMADO", "Confirmado por el local",    2, False),
+    ("EN_PREP",    "En preparación",             3, False),
+    ("EN_CAMINO",  "En camino al cliente",       4, False),
+    ("ENTREGADO",  "Entregado al cliente",       5, True),
+    ("CANCELADO",  "Cancelado",                  6, True),
+]
+
+
+def seed_estados_pedido(session: Session) -> None:
+    changed = False
+    for codigo, descripcion, orden, es_terminal in ESTADOS_PEDIDO_SEED:
+        if not session.get(EstadoPedido, codigo):
+            session.add(
+                EstadoPedido(
+                    codigo=codigo,
+                    descripcion=descripcion,
+                    orden=orden,
+                    es_terminal=es_terminal,
+                )
+            )
             changed = True
     if changed:
         session.commit()
