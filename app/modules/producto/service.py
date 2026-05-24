@@ -120,6 +120,12 @@ class ProductoService:
 
     def create(self, data: ProductoCreate) -> ProductoDetalle:
         with ProductoUnitOfWork(self._session) as uow:
+            # Un producto debe tener al menos 1 ingrediente
+            if not data.ingredientes:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="El producto debe tener al menos un ingrediente",
+                )
             # Validar FKs antes de insertar
             self._validate_unidad(uow, data.unidad_venta_id)
             for cat in data.categorias:

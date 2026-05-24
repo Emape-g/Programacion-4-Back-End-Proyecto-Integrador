@@ -2,7 +2,24 @@ from typing import Sequence
 from sqlmodel import Session, select, func
 
 from app.core.repository import BaseRepository
-from app.modules.pedido.models import Pedido
+from app.modules.pedido.models import Pedido, HistorialEstadoPedido
+
+
+class HistorialEstadoPedidoRepository(BaseRepository[HistorialEstadoPedido]):
+    """
+    Solo permite INSERTs. Nunca se llama a update() ni delete() en este repo.
+    """
+
+    def __init__(self, session: Session) -> None:
+        super().__init__(session, HistorialEstadoPedido)
+
+    def get_by_pedido(self, pedido_id: int) -> Sequence[HistorialEstadoPedido]:
+        """Devuelve el historial completo ordenado cronológicamente."""
+        return self.session.exec(
+            select(HistorialEstadoPedido)
+            .where(HistorialEstadoPedido.pedido_id == pedido_id)
+            .order_by(HistorialEstadoPedido.created_at)
+        ).all()
 
 
 class PedidoRepository(BaseRepository[Pedido]):

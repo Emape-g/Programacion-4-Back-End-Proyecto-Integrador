@@ -14,14 +14,14 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = "changeme-secret-key"
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60
+    jwt_expire_minutes: int = 30
     refresh_token_expire_days: int = 30
 
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
         return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 

@@ -23,6 +23,7 @@ from app.modules.estado_pedido.router import router as estado_pedido_router
 from app.modules.forma_de_pago.router import router as forma_de_pago_router
 from app.modules.ingrediente.models import Ingrediente  # noqa: F401
 from app.modules.ingrediente.router import router as ingrediente_router
+from app.modules.pedido.models import HistorialEstadoPedido  # noqa: F401
 from app.modules.pedido.router import router as pedido_router
 from app.modules.producto.models import Producto  # noqa: F401
 from app.modules.producto.router import router as producto_router
@@ -55,26 +56,28 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Catálogo de Productos API",
-    description="Parcial 1 — FastAPI + SQLModel + PostgreSQL",
-    version="1.0.0",
+    description="Parcial 2 — FastAPI + SQLModel + PostgreSQL",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=["http://localhost:5173"],  # origen exacto requerido para cookies
+    allow_credentials=True,                   # permite envío de cookies entre origen y API
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(usuario_router, prefix="/auth", tags=["auth"])
-app.include_router(rol_router, prefix="/roles", tags=["roles"])
-app.include_router(unidad_medida_router, prefix="/unidades-medida", tags=["unidades de medida"])
-app.include_router(categoria_router, prefix="/categorias", tags=["categorias"])
-app.include_router(ingrediente_router, prefix="/ingredientes", tags=["ingredientes"])
-app.include_router(producto_router, prefix="/productos", tags=["productos"])
-app.include_router(forma_de_pago_router, prefix="/formas-de-pago", tags=["formas de pago"])
-app.include_router(estado_pedido_router, prefix="/estados-pedido", tags=["estados de pedido"])
-app.include_router(pedido_router, prefix="/pedidos", tags=["pedidos"])
-app.include_router(detalle_pedido_router, prefix="/pedidos", tags=["pedidos"])
+API_V1 = "/api/v1"
+
+app.include_router(usuario_router,       prefix=f"{API_V1}/auth",           tags=["auth"])
+app.include_router(rol_router,           prefix=f"{API_V1}/roles",          tags=["roles"])
+app.include_router(unidad_medida_router, prefix=f"{API_V1}/unidades-medida",tags=["unidades de medida"])
+app.include_router(categoria_router,     prefix=f"{API_V1}/categorias",     tags=["categorias"])
+app.include_router(ingrediente_router,   prefix=f"{API_V1}/ingredientes",   tags=["ingredientes"])
+app.include_router(producto_router,      prefix=f"{API_V1}/productos",      tags=["productos"])
+app.include_router(forma_de_pago_router, prefix=f"{API_V1}/formas-de-pago", tags=["formas de pago"])
+app.include_router(estado_pedido_router, prefix=f"{API_V1}/estados-pedido", tags=["estados de pedido"])
+app.include_router(pedido_router,        prefix=f"{API_V1}/pedidos",        tags=["pedidos"])
+app.include_router(detalle_pedido_router,prefix=f"{API_V1}/pedidos",        tags=["pedidos"])

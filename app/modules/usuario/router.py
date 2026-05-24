@@ -8,20 +8,18 @@
 #   - Direcciones:           /usuarios/{id}/direcciones, /direcciones/{id}
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
 from sqlmodel import Session
 
 from app.core.auth import get_current_user, require_role
 from app.core.database import get_session
+from app.core.auth import decode_token
 from app.modules.usuario.schemas import (
     DireccionEntregaCreate,
     DireccionEntregaList,
     DireccionEntregaPublic,
     DireccionEntregaUpdate,
     LoginRequest,
-    LogoutRequest,
-    RefreshRequest,
-    TokenPair,
     UsuarioCreate,
     UsuarioList,
     UsuarioPublic,
@@ -67,39 +65,88 @@ def register(
 
 @router.post(
     "/login",
-    response_model=TokenPair,
-    summary="Login — devuelve access + refresh token",
+    response_model=UsuarioPublic,
+    summary="Login — setea cookies httpOnly con access + refresh token",
 )
 def login(
     data: LoginRequest,
+    response: Response,
     svc: UsuarioService = Depends(get_usuario_service),
-) -> TokenPair:
-    return svc.login(data)
+) -> UsuarioPublic:
+    from app.core.config import settings
+    tokens = svc.login(data)
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.jwt_expire_minutes * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 3600,
+        path="/auth/refresh",
+    )
+    payload = decode_token(tokens.access_token)
+    uid, _ = _actor(payload)
+    return svc.me(uid)
 
 
 @router.post(
     "/refresh",
-    response_model=TokenPair,
-    summary="Rotar tokens (revoca el viejo + emite nuevo par)",
+    response_model=UsuarioPublic,
+    summary="Rotar tokens usando cookie refresh_token",
 )
 def refresh(
-    data: RefreshRequest,
+    response: Response,
+    refresh_token: str | None = Cookie(default=None),
     svc: UsuarioService = Depends(get_usuario_service),
-) -> TokenPair:
-    return svc.refresh(data.refresh_token)
+) -> UsuarioPublic:
+    from app.core.config import settings
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No hay refresh token",
+        )
+    tokens = svc.refresh(refresh_token)
+    response.set_cookie(
+        key="access_token",
+        value=tokens.access_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.jwt_expire_minutes * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=tokens.refresh_token,
+        httponly=True,
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 3600,
+        path="/auth/refresh",
+    )
+    payload = decode_token(tokens.access_token)
+    uid, _ = _actor(payload)
+    return svc.me(uid)
 
 
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Revocar refresh token",
+    summary="Revocar sesión y borrar cookies",
 )
 def logout(
-    data: LogoutRequest,
+    response: Response,
+    refresh_token: str | None = Cookie(default=None),
     _: dict = Depends(get_current_user),
     svc: UsuarioService = Depends(get_usuario_service),
 ) -> Response:
-    svc.logout(data.refresh_token)
+    if refresh_token:
+        svc.logout(refresh_token)
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token", path="/auth/refresh")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

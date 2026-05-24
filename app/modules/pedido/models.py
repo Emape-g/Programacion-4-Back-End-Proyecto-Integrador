@@ -3,6 +3,27 @@ from datetime import datetime, timezone
 from sqlmodel import SQLModel, Field
 
 
+class HistorialEstadoPedido(SQLModel, table=True):
+    """
+    Audit Trail append-only: registra cada transición de estado del pedido.
+    Solo se permite INSERT, jamás UPDATE ni DELETE (RN-06).
+    """
+
+    __tablename__ = "historial_estado_pedido"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    pedido_id: int = Field(foreign_key="pedido.id", nullable=False)
+    estado_anterior: Optional[str] = Field(default=None, max_length=20)  # NULL en la creación
+    estado_nuevo: str = Field(max_length=20, nullable=False)
+    motivo: Optional[str] = Field(default=None)          # requerido al cancelar
+    usuario_id: Optional[int] = Field(default=None)      # quién realizó el cambio
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
 class Pedido(SQLModel, table=True):
     """
     Cabecera del pedido. Los campos monetarios son snapshot (inmutables

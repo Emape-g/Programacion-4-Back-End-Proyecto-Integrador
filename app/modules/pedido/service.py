@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlmodel import Session
 
-from app.modules.pedido.models import Pedido
+from app.modules.pedido.models import Pedido, HistorialEstadoPedido
 from app.modules.detalle_pedido.models import DetallePedido
 from app.modules.pedido.schemas import (
     PedidoCreate,
@@ -149,6 +149,14 @@ class PedidoService:
                 )
                 uow.detalles.add(detalle)
 
+            # Audit Trail: registro inicial (creación del pedido)
+            uow.historial.add(HistorialEstadoPedido(
+                pedido_id=pedido.id,
+                estado_anterior=None,
+                estado_nuevo="PENDIENTE",
+                usuario_id=data.usuario_id,
+            ))
+
             result = self._build_detalle(uow, pedido)
         return result
 
@@ -207,6 +215,15 @@ class PedidoService:
             pedido.estado_codigo = estado_hacia
             pedido.updated_at = datetime.now(timezone.utc)
             uow.pedidos.add(pedido)
+
+            # Audit Trail: registrar la transición (solo INSERT, nunca UPDATE)
+            uow.historial.add(HistorialEstadoPedido(
+                pedido_id=pedido.id,
+                estado_anterior=estado_actual,
+                estado_nuevo=estado_hacia,
+                motivo=data.motivo,
+            ))
+
             result = self._build_detalle(uow, pedido)
         return result
 
