@@ -7,6 +7,7 @@ from app.modules.forma_de_pago.schemas import (
     FormaDePagoCreate,
     FormaDePagoUpdate,
     FormaDePagoPublic,
+    FormaDePagoList,
 )
 from app.modules.forma_de_pago.service import FormaDePagoService
 
@@ -36,12 +37,12 @@ def create_forma_de_pago(
 
 @router.get(
     "/",
-    response_model=List[FormaDePagoPublic],
+    response_model=FormaDePagoList,
     summary="Listar todas las formas de pago (admin)",
 )
 def list_formas_de_pago(
     svc: FormaDePagoService = Depends(get_forma_de_pago_service),
-) -> List[FormaDePagoPublic]:
+) -> FormaDePagoList:
     return svc.get_all()
 
 

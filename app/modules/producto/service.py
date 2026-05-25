@@ -67,6 +67,31 @@ class ProductoService:
                 detail=f"Unidad de medida con id={unidad_id} no encontrada",
             )
 
+    def _build_public(
+        self, uow: ProductoUnitOfWork, producto: Producto
+    ) -> ProductoPublic:
+        cats = uow.producto_categorias.get_by_producto(producto.id)
+        return ProductoPublic(
+            id=producto.id,
+            nombre=producto.nombre,
+            descripcion=producto.descripcion,
+            precio_base=producto.precio_base,
+            unidad_venta_id=producto.unidad_venta_id,
+            imagenes_url=producto.imagenes_url or [],
+            stock_cantidad=producto.stock_cantidad,
+            disponible=producto.disponible,
+            created_at=producto.created_at,
+            updated_at=producto.updated_at,
+            categorias=[
+                ProductoCategoriaPublic(
+                    categoria_id=c.categoria_id,
+                    nombre_categoria=uow.categorias.get_by_id(c.categoria_id).nombre,
+                    es_principal=c.es_principal,
+                )
+                for c in cats
+            ],
+        )
+
     def _build_detalle(
         self, uow: ProductoUnitOfWork, producto: Producto
     ) -> ProductoDetalle:
@@ -179,7 +204,7 @@ class ProductoService:
             )
             total = uow.productos.count()
             result = ProductoList(
-                data=[ProductoPublic.model_validate(p) for p in items],
+                data=[self._build_public(uow, p) for p in items],
                 total=total,
             )
         return result

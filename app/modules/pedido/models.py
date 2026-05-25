@@ -37,6 +37,9 @@ class Pedido(SQLModel, table=True):
     # FK → usuario que realizó el pedido
     usuario_id: int = Field(foreign_key="usuario.id")
 
+    # FK → dirección de entrega (resuelta al crear)
+    direccion_entrega_id: Optional[int] = Field(default=None, foreign_key="direccion_entrega.id")
+
     # FK → estado actual en el FSM
     estado_codigo: str = Field(
         max_length=20,

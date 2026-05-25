@@ -59,6 +59,7 @@ app = FastAPI(
     description="Parcial 2 — FastAPI + SQLModel + PostgreSQL",
     version="2.0.0",
     lifespan=lifespan,
+    swagger_ui_parameters={"withCredentials": True},
 )
 
 app.add_middleware(

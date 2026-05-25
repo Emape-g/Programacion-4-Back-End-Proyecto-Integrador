@@ -41,6 +41,20 @@ class PedidoRepository(BaseRepository[Pedido]):
             select(func.count(Pedido.id)).where(Pedido.deleted_at == None)
         ).one()
 
+    def get_by_estado(self, estado_codigo: str, offset: int = 0, limit: int = 20) -> Sequence[Pedido]:
+        return self.session.exec(
+            select(Pedido)
+            .where(Pedido.estado_codigo == estado_codigo, Pedido.deleted_at == None)
+            .offset(offset)
+            .limit(limit)
+        ).all()
+
+    def count_by_estado(self, estado_codigo: str) -> int:
+        return self.session.exec(
+            select(func.count(Pedido.id))
+            .where(Pedido.estado_codigo == estado_codigo, Pedido.deleted_at == None)
+        ).one()
+
     def get_by_usuario(self, usuario_id: int) -> Sequence[Pedido]:
         return self.session.exec(
             select(Pedido).where(

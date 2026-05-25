@@ -78,6 +78,7 @@ class ProductoPublic(SQLModel):
     imagenes_url: List[str] = []
     stock_cantidad: int
     disponible: bool
+    categorias: List[ProductoCategoriaPublic] = []
     created_at: datetime
     updated_at: datetime
 

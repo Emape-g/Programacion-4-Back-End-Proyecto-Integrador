@@ -42,13 +42,16 @@ def create_pedido(
 @router.get(
     "/",
     response_model=PedidoList,
-    summary="Listar pedidos (paginado)",
+    summary="Listar pedidos (paginado). Filtrar por estado con ?estado=PENDIENTE",
 )
 def list_pedidos(
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    estado: Annotated[str | None, Query(description="PENDIENTE, CONFIRMADO, EN_PREP, EN_CAMINO, ENTREGADO, CANCELADO")] = None,
     svc: PedidoService = Depends(get_pedido_service),
 ) -> PedidoList:
+    if estado:
+        return svc.get_by_estado(estado.upper(), offset=offset, limit=limit)
     return svc.get_all(offset=offset, limit=limit)
 
 

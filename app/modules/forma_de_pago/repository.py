@@ -8,7 +8,7 @@ from app.modules.forma_de_pago.models import FormaDePago
 
 class FormaDePagoRepository(BaseRepository[FormaDePago]) :
 
-    def __init__(self, session, model):
+    def __init__(self, session):
         super().__init__(session, FormaDePago)
     
     def get_habilitadas(self) -> Sequence[FormaDePago]:
@@ -29,5 +29,5 @@ class FormaDePagoRepository(BaseRepository[FormaDePago]) :
         return self.session.exec(query.offset(offset).limit(limit)).all()
     
     def count(self, nombre: Optional[str] = None) -> int:
-        query = select(func.count(FormaDePago.id))
+        query = select(func.count(FormaDePago.codigo))
         return self.session.exec(query).one()

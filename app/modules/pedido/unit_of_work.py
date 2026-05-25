@@ -6,6 +6,7 @@ from app.modules.detalle_pedido.repository import DetallePedidoRepository
 from app.modules.forma_de_pago.repository import FormaDePagoRepository
 from app.modules.estado_pedido.repository import EstadoPedidoRepository
 from app.modules.producto.repository import ProductoRepository
+from app.modules.usuario.repository import DireccionEntregaRepository
 
 
 class PedidoUnitOfWork(UnitOfWork):
@@ -18,3 +19,4 @@ class PedidoUnitOfWork(UnitOfWork):
         self.estados = EstadoPedidoRepository(session)
         self.productos = ProductoRepository(session)
         self.historial = HistorialEstadoPedidoRepository(session)
+        self.direcciones = DireccionEntregaRepository(session)

@@ -31,6 +31,7 @@ class PedidoCreate(SQLModel):
     """Payload para crear un pedido. Los precios los calcula el servidor."""
     usuario_id: int
     forma_pago_codigo: str
+    direccion_entrega_id: Optional[int] = None
     notas: Optional[str] = None
     detalles: List[DetallePedidoCreate] = Field(min_length=1)
 
@@ -45,6 +46,7 @@ class PedidoPublic(SQLModel):
     """Respuesta compacta para listados."""
     id: int
     usuario_id: int
+    direccion_entrega_id: Optional[int] = None
     estado_codigo: str
     forma_pago_codigo: str
     subtotal: float
@@ -62,6 +64,7 @@ class PedidoDetalle(SQLModel):
     """Respuesta completa con los ítems del pedido."""
     id: int
     usuario_id: int
+    direccion_entrega_id: Optional[int] = None
     estado_codigo: str
     forma_pago_codigo: str
     subtotal: float
