@@ -5,13 +5,6 @@ from sqlmodel import SQLModel, Field
 
 
 class DetallePedido(SQLModel, table=True):
-    """
-    PK compuesta (pedido_id, producto_id).
-    Fila INMUTABLE por diseño (RN-04): no tiene updated_at.
-    Los campos *_snapshot guardan los valores en el momento de la compra.
-    personalizacion: lista de IDs de ingrediente que el cliente removió.
-    """
-
     __tablename__ = "detalle_pedido"
 
     pedido_id: int = Field(foreign_key="pedido.id", primary_key=True)

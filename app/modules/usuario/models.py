@@ -1,10 +1,3 @@
-# app/modules/usuario/models.py
-#
-# Contiene la entidad raíz Usuario y todas las tablas que viven en su dominio:
-#   - Usuario             → tabla principal (identidad)
-#   - UsuarioRol          → pivot N:M con Rol (con atributos: asignado_por, expires_at)
-#   - DireccionEntrega    → 1:N propio de Usuario
-#   - RefreshToken        → 1:N propio de Usuario (sesión hasheada SHA-256)
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional

@@ -32,10 +32,6 @@ def create_pedido(
     data: PedidoCreate,
     svc: PedidoService = Depends(get_pedido_service),
 ) -> PedidoDetalle:
-    """
-    Crea la cabecera del pedido y todos sus detalles en una sola transacción.
-    El servidor calcula subtotal, costo de envío y total. Estado inicial: PENDIENTE.
-    """
     return svc.create(data)
 
 

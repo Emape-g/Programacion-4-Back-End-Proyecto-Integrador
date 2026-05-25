@@ -4,11 +4,6 @@ from sqlmodel import SQLModel, Field
 
 
 class HistorialEstadoPedido(SQLModel, table=True):
-    """
-    Audit Trail append-only: registra cada transición de estado del pedido.
-    Solo se permite INSERT, jamás UPDATE ni DELETE (RN-06).
-    """
-
     __tablename__ = "historial_estado_pedido"
 
     id: Optional[int] = Field(default=None, primary_key=True)

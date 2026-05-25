@@ -50,10 +50,16 @@ class ProductoService:
     def _validate_ingrediente(
         self, uow: ProductoUnitOfWork, ingrediente_id: int
     ) -> None:
-        if not uow.ingredientes.get_by_id(ingrediente_id):
+        ing = uow.ingredientes.get_by_id(ingrediente_id)
+        if not ing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Ingrediente con id={ingrediente_id} no encontrado",
+            )
+        if ing.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Ingrediente con id={ingrediente_id} fue dado de baja",
             )
 
     def _validate_unidad(
@@ -155,6 +161,14 @@ class ProductoService:
             self._validate_unidad(uow, data.unidad_venta_id)
             for cat in data.categorias:
                 self._validate_categoria(uow, cat.categoria_id)
+
+            ing_ids = [ing.ingrediente_id for ing in data.ingredientes]
+            if len(ing_ids) != len(set(ing_ids)):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="El body contiene ingredientes duplicados",
+                )
+
             for ing in data.ingredientes:
                 self._validate_ingrediente(uow, ing.ingrediente_id)
                 self._validate_unidad(uow, ing.unidad_medida_id)
