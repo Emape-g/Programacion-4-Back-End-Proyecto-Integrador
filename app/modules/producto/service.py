@@ -1,5 +1,6 @@
 # app/modules/producto/service.py
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -73,6 +74,37 @@ class ProductoService:
                 detail=f"Unidad de medida con id={unidad_id} no encontrada",
             )
 
+    def _validate_unidad_compatible(
+        self, uow: ProductoUnitOfWork, ingrediente_id: int, unidad_receta_id: int
+    ) -> None:
+        ing = uow.ingredientes.get_by_id(ingrediente_id)
+        if not ing or not ing.unidad_medida_id:
+            return
+        unidad_ing = uow.unidades.get_by_id(ing.unidad_medida_id)
+        unidad_receta = uow.unidades.get_by_id(unidad_receta_id)
+        if unidad_ing and unidad_receta and unidad_ing.tipo != unidad_receta.tipo:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Unidad '{unidad_receta.simbolo}' ({unidad_receta.tipo}) "
+                    f"incompatible con unidad del ingrediente "
+                    f"'{unidad_ing.simbolo}' ({unidad_ing.tipo})"
+                ),
+            )
+
+    def _calcular_costo(
+        self, uow: ProductoUnitOfWork, pi: "ProductoIngrediente"
+    ) -> Decimal:
+        ing = uow.ingredientes.get_by_id(pi.ingrediente_id)
+        if not ing or not ing.unidad_medida_id:
+            return Decimal(0)
+        unidad_ing = uow.unidades.get_by_id(ing.unidad_medida_id)
+        unidad_receta = uow.unidades.get_by_id(pi.unidad_medida_id)
+        if not unidad_ing or not unidad_receta:
+            return Decimal(0)
+        factor = unidad_receta.factor_base / unidad_ing.factor_base
+        return (pi.cantidad * factor * ing.precio_unitario).quantize(Decimal("0.01"))
+
     def _build_public(
         self, uow: ProductoUnitOfWork, producto: Producto
     ) -> ProductoPublic:
@@ -142,6 +174,7 @@ class ProductoService:
                         i.unidad_medida_id
                     ).simbolo,
                     es_removible=i.es_removible,
+                    costo=self._calcular_costo(uow, i),
                 )
                 for i in ings
             ],
@@ -172,6 +205,7 @@ class ProductoService:
             for ing in data.ingredientes:
                 self._validate_ingrediente(uow, ing.ingrediente_id)
                 self._validate_unidad(uow, ing.unidad_medida_id)
+                self._validate_unidad_compatible(uow, ing.ingrediente_id, ing.unidad_medida_id)
 
             producto = Producto(
                 nombre=data.nombre,
@@ -296,6 +330,7 @@ class ProductoService:
             producto = self._get_or_404(uow, producto_id)
             self._validate_ingrediente(uow, data.ingrediente_id)
             self._validate_unidad(uow, data.unidad_medida_id)
+            self._validate_unidad_compatible(uow, data.ingrediente_id, data.unidad_medida_id)
 
             if uow.producto_ingredientes.get_vinculo(
                 producto_id, data.ingrediente_id

@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -38,6 +39,13 @@ class ProductoIngredientePublic(SQLModel):
     unidad_medida_id: int
     unidad_simbolo: str
     es_removible: bool
+    costo: Decimal
+
+    @field_validator("cantidad", "costo", mode="before")
+    @classmethod
+    def strip_trailing_zeros(cls, v: Decimal) -> Decimal:
+        d = Decimal(v).normalize()
+        return d.quantize(Decimal(1)) if d == d.to_integral_value() else d
 
 
 # ── Entrada: Producto ─────────────────────────────────────────────────────────

@@ -15,14 +15,14 @@ ROLES_SEED: list[tuple[str, str, str]] = [
 ]
 
 
-UNIDADES_MEDIDA_SEED: list[tuple[str, str, str]] = [
-    ("kilogramo", "kg", "masa"),
-    ("gramo", "g", "masa"),
-    ("litro", "L", "volumen"),
-    ("mililitro", "mL", "volumen"),
-    ("pieza", "u", "unidad"),
-    ("docena", "doc", "unidad"),
-    ("metro cuadrado", "m²", "area"),
+UNIDADES_MEDIDA_SEED: list[tuple[str, str, str, float]] = [
+    ("kilogramo", "kg", "masa", 1000),
+    ("gramo", "g", "masa", 1),
+    ("litro", "L", "volumen", 1000),
+    ("mililitro", "mL", "volumen", 1),
+    ("pieza", "u", "unidad", 1),
+    ("docena", "doc", "unidad", 12),
+    ("metro cuadrado", "m²", "area", 1),
 ]
 
 
@@ -68,12 +68,19 @@ def seed_admin_usuario(session: Session) -> None:
 
 def seed_unidades_medida(session: Session) -> None:
     changed = False
-    for nombre, simbolo, tipo in UNIDADES_MEDIDA_SEED:
+    for nombre, simbolo, tipo, factor_base in UNIDADES_MEDIDA_SEED:
         existente = session.exec(
             select(UnidadMedida).where(UnidadMedida.simbolo == simbolo)
         ).first()
-        if not existente:
-            session.add(UnidadMedida(nombre=nombre, simbolo=simbolo, tipo=tipo))
+        if existente:
+            if float(existente.factor_base) != factor_base:
+                existente.factor_base = factor_base
+                session.add(existente)
+                changed = True
+        else:
+            session.add(UnidadMedida(
+                nombre=nombre, simbolo=simbolo, tipo=tipo, factor_base=factor_base
+            ))
             changed = True
     if changed:
         session.commit()
