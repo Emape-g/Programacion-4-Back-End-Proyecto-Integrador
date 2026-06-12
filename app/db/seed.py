@@ -39,10 +39,10 @@ def seed_roles(session: Session) -> None:
 
 
 ADMIN_SEED = {
-    "email": "admin@example.com",
+    "email": "admin@foodstore.com",
     "nombre": "Admin",
     "apellido": "Sistema",
-    "password": "admin123",
+    "password": "Admin1234!",
 }
 
 
@@ -111,12 +111,12 @@ def seed_formas_pago(session: Session) -> None:
 
 # (codigo, descripcion, orden, es_terminal) — FSM del Dominio 3
 ESTADOS_PEDIDO_SEED: list[tuple[str, str, int, bool]] = [
-    ("PENDIENTE",  "Pendiente de confirmación",  1, False),
-    ("CONFIRMADO", "Confirmado por el local",    2, False),
-    ("EN_PREP",    "En preparación",             3, False),
-    ("EN_CAMINO",  "En camino al cliente",       4, False),
-    ("ENTREGADO",  "Entregado al cliente",       5, True),
-    ("CANCELADO",  "Cancelado",                  6, True),
+    ("PENDIENTE",  "Pedido creado, pago pendiente", 1, False),
+    ("CONFIRMADO", "Pago procesado y confirmado",   2, False),
+    ("EN_PREP",    "En preparación en cocina",      3, False),
+    ("EN_CAMINO",  "En camino al cliente",          4, False),
+    ("ENTREGADO",  "Entrega confirmada",            5, True),
+    ("CANCELADO",  "Pedido cancelado",              6, True),
 ]
 
 

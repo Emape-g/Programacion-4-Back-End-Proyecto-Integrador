@@ -34,7 +34,7 @@ class ProductoService:
 
     def _get_or_404(self, uow: ProductoUnitOfWork, producto_id: int) -> Producto:
         p = uow.productos.get_by_id(producto_id)
-        if not p:
+        if not p or p.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Producto con id={producto_id} no encontrado",
@@ -250,7 +250,7 @@ class ProductoService:
             items = uow.productos.get_all_filtered(
                 offset=offset, limit=limit, disponible=disponible, nombre=nombre
             )
-            total = uow.productos.count()
+            total = uow.productos.count(disponible=disponible, nombre=nombre)
             result = ProductoList(
                 data=[self._build_public(uow, p) for p in items],
                 total=total,

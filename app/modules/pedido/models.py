@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime, timezone
+from decimal import Decimal
 from sqlmodel import SQLModel, Field
 
 
@@ -9,10 +10,14 @@ class HistorialEstadoPedido(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     pedido_id: int = Field(foreign_key="pedido.id", nullable=False)
-    estado_anterior: Optional[str] = Field(default=None, max_length=20)  # NULL en la creación
-    estado_nuevo: str = Field(max_length=20, nullable=False)
-    motivo: Optional[str] = Field(default=None)          # requerido al cancelar
-    usuario_id: Optional[int] = Field(default=None)      # quién realizó el cambio
+    estado_desde: Optional[str] = Field(
+        default=None, max_length=20, foreign_key="estado_pedido.codigo"
+    )
+    estado_hacia: str = Field(
+        max_length=20, nullable=False, foreign_key="estado_pedido.codigo"
+    )
+    motivo: Optional[str] = Field(default=None)
+    usuario_id: Optional[int] = Field(default=None)
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
@@ -20,41 +25,54 @@ class HistorialEstadoPedido(SQLModel, table=True):
 
 
 class Pedido(SQLModel, table=True):
-    """
-    Cabecera del pedido. Los campos monetarios son snapshot (inmutables
-    desde la creación). El estado cambia siguiendo el FSM de EstadoPedido.
-    """
-
     __tablename__ = "pedido"
 
     id: Optional[int] = Field(default=None, primary_key=True)
 
-    # FK → usuario que realizó el pedido
     usuario_id: int = Field(foreign_key="usuario.id")
 
-    # FK → dirección de entrega (resuelta al crear)
-    direccion_entrega_id: Optional[int] = Field(default=None, foreign_key="direccion_entrega.id")
+    direccion_entrega_id: Optional[int] = Field(
+        default=None, foreign_key="direccion_entrega.id"
+    )
 
-    # FK → estado actual en el FSM
     estado_codigo: str = Field(
         max_length=20,
         foreign_key="estado_pedido.codigo",
         default="PENDIENTE",
     )
 
-    # FK → forma de pago elegida
-    forma_pago_codigo: str = Field(max_length=20, foreign_key="forma_de_pago.codigo")
+    forma_pago_codigo: str = Field(
+        max_length=20, foreign_key="forma_de_pago.codigo"
+    )
 
-    # Snapshot monetario (se calcula al crear y no cambia)
-    subtotal: float = Field(default=0.0, ge=0)
-    descuento: float = Field(default=0.0, ge=0)
-    costo_envio: float = Field(default=50.0, ge=0)
-    total: float = Field(default=0.0, ge=0)
+    subtotal: Decimal = Field(default=Decimal("0.00"), max_digits=10, decimal_places=2, ge=0)
+    descuento: Decimal = Field(default=Decimal("0.00"), max_digits=10, decimal_places=2, ge=0)
+    costo_envio: Decimal = Field(default=Decimal("50.00"), max_digits=10, decimal_places=2, ge=0)
+    total: Decimal = Field(default=Decimal("0.00"), max_digits=10, decimal_places=2, ge=0)
 
-    # Opcional: notas del cliente
     notas: Optional[str] = Field(default=None)
 
-    # Auditoría
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     deleted_at: Optional[datetime] = Field(default=None)
+
+
+class Pago(SQLModel, table=True):
+    __tablename__ = "pago"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    pedido_id: int = Field(foreign_key="pedido.id", nullable=False, index=True)
+
+    mp_payment_id: Optional[int] = Field(default=None, unique=True)
+    mp_status: str = Field(max_length=30, nullable=False, default="pending")
+    mp_status_detail: Optional[str] = Field(default=None, max_length=100)
+    transaction_amount: Decimal = Field(
+        max_digits=10, decimal_places=2, nullable=False, default=Decimal("0.00")
+    )
+    payment_method_id: Optional[str] = Field(default=None, max_length=50)
+
+    external_reference: str = Field(max_length=100, unique=True, nullable=False)
+    idempotency_key: str = Field(max_length=100, unique=True, nullable=False)
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

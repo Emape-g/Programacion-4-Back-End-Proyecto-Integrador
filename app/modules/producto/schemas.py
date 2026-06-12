@@ -112,3 +112,11 @@ class ProductoDetalle(SQLModel):
 class ProductoList(SQLModel):
     data: List[ProductoPublic]
     total: int
+
+
+class ImagenProductoUpdate(SQLModel):
+    imagenes_url: List[str]
+
+
+class DisponibilidadUpdate(SQLModel):
+    disponible: bool

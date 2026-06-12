@@ -51,11 +51,22 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenPair(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+
+TokenPair = TokenResponse
+
+
+class UserResponse(SQLModel):
+    id: int
+    nombre: str
+    apellido: str
+    email: str
+    roles: List[str] = []
+    created_at: datetime
 
 
 class RefreshRequest(BaseModel):

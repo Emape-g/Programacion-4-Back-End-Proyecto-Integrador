@@ -56,12 +56,13 @@ class IngredienteService:
             nombre=ing.nombre,
             descripcion=ing.descripcion,
             es_alergeno=ing.es_alergeno,
+            stock_cantidad=ing.stock_cantidad,
             precio_unitario=ing.precio_unitario,
             unidad_medida_id=ing.unidad_medida_id,
             unidad_simbolo=unidad.simbolo if unidad else None,
             created_at=ing.created_at,
             updated_at=ing.updated_at,
-            delete_at=ing.deleted_at,
+            deleted_at=ing.deleted_at,
         )
 
     # ── Casos de uso ──────────────────────────────────────────────────────────

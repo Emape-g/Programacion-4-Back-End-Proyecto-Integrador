@@ -22,8 +22,13 @@ class ProductoRepository(BaseRepository[Producto]):
             .limit(limit)
         ).all()
 
-    def count(self) -> int:
-        return self.session.exec(select(func.count(Producto.id))).one()
+    def count(self, disponible: Optional[bool] = None, nombre: Optional[str] = None) -> int:
+        query = select(func.count(Producto.id)).where(Producto.deleted_at == None)
+        if disponible is not None:
+            query = query.where(Producto.disponible == disponible)
+        if nombre:
+            query = query.where(Producto.nombre.ilike(f"%{nombre}%"))
+        return self.session.exec(query).one()
     
     def soft_delete(self, instance: Producto) -> Producto:
         instance.deleted_at = datetime.now(timezone.utc)
@@ -32,7 +37,7 @@ class ProductoRepository(BaseRepository[Producto]):
         return instance
 
     def get_all_filtered(self, offset: int = 0, limit: int = 20, disponible: Optional[bool] = None, nombre: Optional[str] = None) -> Sequence[Producto]:
-        query = select(Producto)
+        query = select(Producto).where(Producto.deleted_at == None)
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
         if nombre:

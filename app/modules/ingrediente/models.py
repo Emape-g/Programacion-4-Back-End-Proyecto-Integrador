@@ -16,6 +16,7 @@ class Ingrediente(SQLModel, table=True):
     nombre: str = Field(min_length=2, max_length=100, unique=True)
     descripcion: Optional[str] = Field(default=None)
     es_alergeno: bool = Field(default=False)
+    stock_cantidad: int = Field(default=0, ge=0, nullable=False)
 
     precio_unitario: Decimal = Field(
         max_digits=10, decimal_places=2, ge=0, nullable=False, default=0

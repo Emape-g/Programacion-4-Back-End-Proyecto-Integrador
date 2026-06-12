@@ -3,7 +3,7 @@ from typing import Annotated, Literal, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
-from app.core.auth import require_admin
+from app.core.auth import require_admin, require_role
 from app.core.database import get_session
 from app.modules.ingrediente.schemas import (
     IngredienteCreate,
@@ -44,7 +44,7 @@ def create_ingrediente(
     "/",
     response_model=IngredienteList,
     summary="Listar ingredientes (paginado, filtrable)",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_role("ADMIN", "STOCK"))],
 )
 def list_ingredientes(
     offset: Annotated[int, Query(ge=0, description="Registros a omitir")] = 0,
@@ -60,7 +60,7 @@ def list_ingredientes(
     "/{ingrediente_id}",
     response_model=IngredientePublic,
     summary="Obtener ingrediente por ID",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_role("ADMIN", "STOCK"))],
 )
 def get_ingrediente(
     ingrediente_id: int,
