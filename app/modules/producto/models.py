@@ -15,8 +15,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Column, String
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -81,10 +80,9 @@ class Producto(SQLModel, table=True):
         max_digits=10, decimal_places=2, ge=0, nullable=False
     )
 
-    # PG TEXT[] — array de URLs de imágenes del producto
     imagenes_url: List[str] = Field(
         default_factory=list,
-        sa_column=Column(ARRAY(String)),
+        sa_column=Column(JSON, nullable=False, server_default="[]"),
     )
 
     stock_cantidad: int = Field(default=0, ge=0, nullable=False)

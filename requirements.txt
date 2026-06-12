@@ -7,3 +7,9 @@ pydantic-settings
 python-jose[cryptography]
 bcrypt
 email-validator
+mercadopago>=2.3.0
+cloudinary>=1.36.0
+slowapi>=0.1.9
+websockets
+pytest
+httpx
