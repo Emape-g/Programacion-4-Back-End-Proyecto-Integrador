@@ -15,14 +15,13 @@ ROLES_SEED: list[tuple[str, str, str]] = [
 ]
 
 
-UNIDADES_MEDIDA_SEED: list[tuple[str, str, str, float]] = [
-    ("kilogramo", "kg", "masa", 1000),
-    ("gramo", "g", "masa", 1),
-    ("litro", "L", "volumen", 1000),
-    ("mililitro", "mL", "volumen", 1),
-    ("pieza", "u", "unidad", 1),
-    ("docena", "doc", "unidad", 12),
-    ("metro cuadrado", "m²", "area", 1),
+UNIDADES_MEDIDA_SEED: list[tuple[str, str, str]] = [
+    ("kilogramo", "kg", "peso"),
+    ("gramo", "g", "peso"),
+    ("litro", "L", "volumen"),
+    ("mililitro", "ml", "volumen"),
+    ("unidad", "ud", "contable"),
+    ("porciones", "porciones", "contable"),
 ]
 
 
@@ -68,19 +67,12 @@ def seed_admin_usuario(session: Session) -> None:
 
 def seed_unidades_medida(session: Session) -> None:
     changed = False
-    for nombre, simbolo, tipo, factor_base in UNIDADES_MEDIDA_SEED:
+    for nombre, simbolo, tipo in UNIDADES_MEDIDA_SEED:
         existente = session.exec(
             select(UnidadMedida).where(UnidadMedida.simbolo == simbolo)
         ).first()
-        if existente:
-            if float(existente.factor_base) != factor_base:
-                existente.factor_base = factor_base
-                session.add(existente)
-                changed = True
-        else:
-            session.add(UnidadMedida(
-                nombre=nombre, simbolo=simbolo, tipo=tipo, factor_base=factor_base
-            ))
+        if not existente:
+            session.add(UnidadMedida(nombre=nombre, simbolo=simbolo, tipo=tipo))
             changed = True
     if changed:
         session.commit()
@@ -114,9 +106,8 @@ ESTADOS_PEDIDO_SEED: list[tuple[str, str, int, bool]] = [
     ("PENDIENTE",  "Pedido creado, pago pendiente", 1, False),
     ("CONFIRMADO", "Pago procesado y confirmado",   2, False),
     ("EN_PREP",    "En preparación en cocina",      3, False),
-    ("EN_CAMINO",  "En camino al cliente",          4, False),
-    ("ENTREGADO",  "Entrega confirmada",            5, True),
-    ("CANCELADO",  "Pedido cancelado",              6, True),
+    ("ENTREGADO",  "Entrega confirmada",            4, True),
+    ("CANCELADO",  "Pedido cancelado",              5, True),
 ]
 
 
