@@ -6,6 +6,11 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session
 
+try:
+    import mercadopago
+except ImportError:
+    mercadopago = None
+
 from app.core.config import settings
 from app.core.ws_manager import ws_manager
 from app.modules.pedido.models import HistorialEstadoPedido, Pago, Pedido
@@ -38,8 +43,10 @@ class PagoService:
         if not access_token:
             raise RuntimeError("MercadoPago no configurado. Configure MP_ACCESS_TOKEN")
 
+        if mercadopago is None:
+            raise RuntimeError("pip install mercadopago")
+
         try:
-            import mercadopago
             sdk = mercadopago.SDK(access_token)
 
             preference_data = {
@@ -68,8 +75,6 @@ class PagoService:
                 "init_point": response.get("init_point"),
             }
 
-        except ImportError:
-            raise RuntimeError("pip install mercadopago")
         except RuntimeError:
             raise
         except Exception as e:
@@ -81,8 +86,10 @@ class PagoService:
         if not access_token:
             raise RuntimeError("MP no configurado")
 
+        if mercadopago is None:
+            raise RuntimeError("pip install mercadopago")
+
         try:
-            import mercadopago
             sdk = mercadopago.SDK(access_token)
             result = sdk.payment().get(payment_id)
 
@@ -99,8 +106,6 @@ class PagoService:
                 "external_reference": response.get("external_reference"),
             }
 
-        except ImportError:
-            raise RuntimeError("pip install mercadopago")
         except RuntimeError:
             raise
         except Exception as e:

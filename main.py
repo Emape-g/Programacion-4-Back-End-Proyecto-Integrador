@@ -40,6 +40,7 @@ from app.modules.rol.router import router as rol_router
 from app.modules.unidad_medida.router import router as unidad_medida_router
 from app.modules.uploads.router import router as uploads_router
 from app.modules.usuario.router import router as usuario_router
+from app.core.ws_router import router as ws_router
 
 
 @asynccontextmanager
@@ -85,3 +86,4 @@ app.include_router(detalle_pedido_router, prefix=f"{API_V1}/pedidos",          t
 app.include_router(pagos_router,          prefix=f"{API_V1}/pagos",            tags=["pagos"])
 app.include_router(uploads_router,        prefix=f"{API_V1}/uploads",          tags=["uploads"])
 app.include_router(estadisticas_router,   prefix=f"{API_V1}/estadisticas",     tags=["estadisticas"])
+app.include_router(ws_router,             tags=["websocket"])
