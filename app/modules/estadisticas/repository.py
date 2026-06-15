@@ -88,12 +88,12 @@ class EstadisticasRepository:
         stmt = (
             select(
                 Pedido.forma_pago_codigo,
-                func.coalesce(func.sum(Pago.transaction_amount), 0).label("total"),
+                func.coalesce(func.sum(Pago.monto), 0).label("total"),
                 func.count(Pago.id).label("cantidad"),
             )
             .join(Pago, Pago.pedido_id == Pedido.id)
             .where(
-                Pago.mp_status == "approved",
+                Pago.estado == "aprobado",
                 Pedido.estado_codigo != "CANCELADO",
                 Pedido.deleted_at.is_(None),
             )

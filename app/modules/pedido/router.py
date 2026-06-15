@@ -75,8 +75,12 @@ def get_pedido(
     detail = svc.get_by_id(pedido_id)
     roles = set(payload.get("roles") or [])
     if not roles.intersection({"ADMIN", "PEDIDOS"}):
-        with Session(svc._session.get_bind()) if hasattr(svc._session, 'get_bind') else svc._session as _:
-            pass
+        usuario_id = int(payload["uid"])
+        if detail.usuario_id != usuario_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo puedes ver tus propios pedidos",
+            )
     return detail
 
 

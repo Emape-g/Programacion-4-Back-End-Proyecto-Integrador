@@ -97,7 +97,12 @@ class IngredienteService:
 
     def activate(self, ingrediente_id: int) -> IngredientePublic:
         with IngredienteUnitOfWork(self._session) as uow:
-            ing = self._get_or_404(uow, ingrediente_id)
+            ing = uow.ingredientes.get_by_id_including_deleted(ingrediente_id)
+            if not ing:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Ingrediente con id={ingrediente_id} no encontrado",
+                )
             uow.ingredientes.activate(ing)
             result = IngredientePublic.model_validate(ing)
         return result

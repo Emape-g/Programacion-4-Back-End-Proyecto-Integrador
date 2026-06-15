@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 
+from app.core.auth import require_admin
 from app.core.database import get_session
 from app.modules.estado_pedido.schemas import (
     EstadoPedidoCreate,
@@ -26,6 +27,7 @@ def get_estado_pedido_service(
     response_model=EstadoPedidoPublic,
     status_code=status.HTTP_201_CREATED,
     summary="Crear estado de pedido (admin)",
+    dependencies=[Depends(require_admin)],
 )
 def create_estado(
     data: EstadoPedidoCreate,
@@ -61,6 +63,7 @@ def get_estado(
     "/{codigo}",
     response_model=EstadoPedidoPublic,
     summary="Actualizar estado de pedido (admin)",
+    dependencies=[Depends(require_admin)],
 )
 def update_estado(
     codigo: str,

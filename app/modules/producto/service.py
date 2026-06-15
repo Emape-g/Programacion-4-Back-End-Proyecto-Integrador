@@ -211,12 +211,13 @@ class ProductoService:
         limit: int = 20,
         disponible: Optional[bool] = None,
         nombre: Optional[str] = None,
+        categoria_id: Optional[int] = None,
     ) -> ProductoList:
         with ProductoUnitOfWork(self._session) as uow:
             items = uow.productos.get_all_filtered(
-                offset=offset, limit=limit, disponible=disponible, nombre=nombre
+                offset=offset, limit=limit, disponible=disponible, nombre=nombre, categoria_id=categoria_id
             )
-            total = uow.productos.count(disponible=disponible, nombre=nombre)
+            total = uow.productos.count(disponible=disponible, nombre=nombre, categoria_id=categoria_id)
             result = ProductoList(
                 data=[self._build_public(uow, p) for p in items],
                 total=total,

@@ -63,15 +63,16 @@ class Pago(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     pedido_id: int = Field(foreign_key="pedido.id", nullable=False, index=True)
 
-    mp_payment_id: Optional[int] = Field(default=None, unique=True)
-    mp_status: str = Field(max_length=30, nullable=False, default="pending")
-    mp_status_detail: Optional[str] = Field(default=None, max_length=100)
-    transaction_amount: Decimal = Field(
-        max_digits=10, decimal_places=2, nullable=False, default=Decimal("0.00")
-    )
-    payment_method_id: Optional[str] = Field(default=None, max_length=50)
+    monto: Decimal = Field(max_digits=10, decimal_places=2, nullable=False, default=Decimal("0.00"))
+    estado: str = Field(max_length=20, nullable=False, default="pendiente")
 
-    external_reference: str = Field(max_length=100, unique=True, nullable=False)
+    mp_preference_id: Optional[str] = Field(default=None, max_length=200)
+    mp_init_point: Optional[str] = Field(default=None, max_length=500)
+    mp_payment_id: Optional[int] = Field(default=None, unique=True)
+    mp_status: Optional[str] = Field(default=None, max_length=30)
+    mp_status_detail: Optional[str] = Field(default=None, max_length=100)
+    mp_merchant_order_id: Optional[int] = Field(default=None)
+
     idempotency_key: str = Field(max_length=100, unique=True, nullable=False)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -1,26 +1,35 @@
 from decimal import Decimal
 from typing import Optional
+
 from pydantic import BaseModel
 
 
 class CrearPagoRequest(BaseModel):
     pedido_id: int
-    token: str
-    payment_method_id: str
-    installments: int = 1
-    issuer_id: Optional[str] = None
-    payer_email: str
+
+
+class PagoCrearResponse(BaseModel):
+    pago_id: int
+    preference_id: str
+    init_point: Optional[str] = None
+    public_key: Optional[str] = None
+
+
+class PagoEstadoResponse(BaseModel):
+    estado: Optional[str] = None
+    pedido_id: int
 
 
 class PagoResponse(BaseModel):
     id: int
     pedido_id: int
+    monto: Decimal
+    estado: str
+    mp_preference_id: Optional[str] = None
+    mp_init_point: Optional[str] = None
     mp_payment_id: Optional[int] = None
-    mp_status: str
+    mp_status: Optional[str] = None
     mp_status_detail: Optional[str] = None
-    transaction_amount: Decimal
-    payment_method_id: Optional[str] = None
-    external_reference: str
     idempotency_key: str
 
     model_config = {"from_attributes": True}

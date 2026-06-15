@@ -1,9 +1,16 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Request, status
 from sqlmodel import Session
 
 from app.core.auth import get_current_user
 from app.core.database import get_session
-from app.modules.pagos.schemas import CrearPagoRequest, PagoResponse
+from app.modules.pagos.schemas import (
+    CrearPagoRequest,
+    PagoCrearResponse,
+    PagoEstadoResponse,
+    PagoResponse,
+)
 from app.modules.pagos.service import PagoService
 
 router = APIRouter()
@@ -15,17 +22,17 @@ def get_pago_service(session: Session = Depends(get_session)) -> PagoService:
 
 @router.post(
     "/crear",
-    response_model=PagoResponse,
+    response_model=PagoCrearResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Crear pago con token de tarjeta MercadoPago",
+    summary="Crear preferencia de pago en MercadoPago",
 )
 async def crear_pago(
     data: CrearPagoRequest,
     payload: dict = Depends(get_current_user),
     svc: PagoService = Depends(get_pago_service),
-) -> PagoResponse:
+) -> PagoCrearResponse:
     usuario_id = int(payload["uid"])
-    return await svc.crear_pago(data, usuario_id)
+    return await svc.crear_pago(data.pedido_id, usuario_id)
 
 
 @router.post(
@@ -37,7 +44,22 @@ async def webhook(
     svc: PagoService = Depends(get_pago_service),
 ) -> dict:
     body = await request.json()
-    return await svc.webhook(body)
+    query_params = dict(request.query_params)
+    return await svc.procesar_webhook(body, query_params)
+
+
+@router.get(
+    "/confirmar/{pedido_id}",
+    response_model=PagoEstadoResponse,
+    summary="Confirmar/sincronizar estado de pago con MercadoPago",
+)
+def confirmar_pago(
+    pedido_id: int,
+    payment_id: Optional[int] = None,
+    payload: dict = Depends(get_current_user),
+    svc: PagoService = Depends(get_pago_service),
+) -> PagoEstadoResponse:
+    return svc.confirmar_pago(pedido_id, payment_id)
 
 
 @router.get(

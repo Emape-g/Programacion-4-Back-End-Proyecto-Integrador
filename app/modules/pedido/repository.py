@@ -26,14 +26,21 @@ class PagoRepository(BaseRepository[Pago]):
             select(Pago).where(Pago.pedido_id == pedido_id)
         ).first()
 
-    def get_by_external_reference(self, ref: str) -> Pago | None:
-        return self.session.exec(
-            select(Pago).where(Pago.external_reference == ref)
-        ).first()
-
     def get_by_mp_payment_id(self, mp_id: int) -> Pago | None:
         return self.session.exec(
             select(Pago).where(Pago.mp_payment_id == mp_id)
+        ).first()
+
+    def get_by_mp_merchant_order_id(self, order_id: int) -> Pago | None:
+        return self.session.exec(
+            select(Pago).where(Pago.mp_merchant_order_id == order_id)
+        ).first()
+
+    def get_ultimo_by_pedido(self, pedido_id: int) -> Pago | None:
+        return self.session.exec(
+            select(Pago)
+            .where(Pago.pedido_id == pedido_id)
+            .order_by(Pago.created_at.desc())
         ).first()
 
 
@@ -89,4 +96,29 @@ class PedidoRepository(BaseRepository[Pedido]):
         return self.session.exec(
             select(func.count(Pedido.id))
             .where(Pedido.usuario_id == usuario_id, Pedido.deleted_at.is_(None))
+        ).one()
+
+    def get_by_usuario_and_estado(
+        self, usuario_id: int, estado_codigo: str, offset: int = 0, limit: int = 20
+    ) -> Sequence[Pedido]:
+        return self.session.exec(
+            select(Pedido)
+            .where(
+                Pedido.usuario_id == usuario_id,
+                Pedido.estado_codigo == estado_codigo,
+                Pedido.deleted_at.is_(None),
+            )
+            .order_by(Pedido.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        ).all()
+
+    def count_by_usuario_and_estado(self, usuario_id: int, estado_codigo: str) -> int:
+        return self.session.exec(
+            select(func.count(Pedido.id))
+            .where(
+                Pedido.usuario_id == usuario_id,
+                Pedido.estado_codigo == estado_codigo,
+                Pedido.deleted_at.is_(None),
+            )
         ).one()
