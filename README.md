@@ -47,7 +47,10 @@ cp .env.example .env
 #   - MP_NOTIFICATION_URL: URL pública del webhook (ngrok/loca.lt en dev)
 #   - CLOUDINARY_*: credenciales de Cloudinary
 
-# 6) Arrancar la app — el lifespan crea tablas y siembra catálogos/admin
+# 6) Migrar el schema (opcional: el lifespan también crea las tablas)
+alembic upgrade head
+
+# 7) Arrancar la app — el lifespan siembra catálogos/admin
 uvicorn main:app --reload
 ```
 
@@ -81,6 +84,10 @@ WebSocket (sin prefijo REST, autenticación por `?token=<jwt>`):
 - `WS /ws/pedidos/{pedido_id}` — eventos de un pedido (dueño, `ADMIN` o `PEDIDOS`).
 
 Close codes: `4001` token faltante/inválido · `4003` sin permiso o pedido inexistente.
+
+## Modelo de datos
+
+Ver `food_store_erd_v7.svg` para el ERD completo (Especificación Técnica v6.0 — ERD v7).
 
 ## Estructura
 

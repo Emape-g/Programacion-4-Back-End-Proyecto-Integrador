@@ -263,7 +263,7 @@ class PedidoService:
             permitidos = TRANSITIONS.get(estado_actual, [])
             if nuevo_estado not in permitidos:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=(
                         f"Transición inválida: {estado_actual} → {nuevo_estado}. "
                         f"Permitidas: {permitidos or 'ninguna (estado terminal)'}."
@@ -272,7 +272,7 @@ class PedidoService:
 
             if nuevo_estado == "CANCELADO" and not data.motivo:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="El campo 'motivo' es obligatorio al cancelar un pedido",
                 )
 
@@ -320,7 +320,7 @@ class PedidoService:
 
             if pedido.estado_codigo not in ("PENDIENTE", "CONFIRMADO"):
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="Solo se pueden cancelar pedidos en estado PENDIENTE o CONFIRMADO",
                 )
 

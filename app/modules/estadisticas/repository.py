@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Sequence
 
@@ -117,12 +117,16 @@ class EstadisticasRepository:
     def get_resumen_kpis(self) -> dict:
         today = date.today()
         first_of_month = today.replace(day=1)
+        today_start = datetime.combine(today, time.min)
+        tomorrow_start = today_start + timedelta(days=1)
+        month_start = datetime.combine(first_of_month, time.min)
 
         ventas_hoy = self.session.exec(
             select(func.coalesce(func.sum(Pedido.total), 0)).where(
                 Pedido.estado_codigo != "CANCELADO",
                 Pedido.deleted_at.is_(None),
-                func.cast(Pedido.created_at, Date) == today,
+                Pedido.created_at >= today_start,
+                Pedido.created_at < tomorrow_start,
             )
         ).one()
 
@@ -130,7 +134,7 @@ class EstadisticasRepository:
             select(func.coalesce(func.sum(Pedido.total), 0)).where(
                 Pedido.estado_codigo != "CANCELADO",
                 Pedido.deleted_at.is_(None),
-                func.cast(Pedido.created_at, Date) >= first_of_month,
+                Pedido.created_at >= month_start,
             )
         ).one()
 

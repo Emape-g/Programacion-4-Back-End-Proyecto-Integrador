@@ -64,6 +64,12 @@ class Pago(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     pedido_id: int = Field(foreign_key="pedido.id", nullable=False, index=True)
 
+    external_reference: str = Field(max_length=64, unique=True, nullable=False)
+    transaction_amount: Decimal = Field(
+        max_digits=10, decimal_places=2, nullable=False, default=Decimal("0.00"),
+    )
+    payment_method_id: Optional[str] = Field(default=None, max_length=50)
+
     monto: Decimal = Field(max_digits=10, decimal_places=2, nullable=False, default=Decimal("0.00"))
     estado: str = Field(max_length=20, nullable=False, default="pendiente")
 

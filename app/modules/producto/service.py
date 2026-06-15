@@ -58,7 +58,7 @@ class ProductoService:
             )
         if ing.deleted_at is not None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Ingrediente con id={ingrediente_id} fue dado de baja",
             )
 
@@ -154,7 +154,7 @@ class ProductoService:
             # Un producto debe tener al menos 1 ingrediente
             if not data.ingredientes:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="El producto debe tener al menos un ingrediente",
                 )
             # Validar FKs antes de insertar
@@ -165,7 +165,7 @@ class ProductoService:
             ing_ids = [ing.ingrediente_id for ing in data.ingredientes]
             if len(ing_ids) != len(set(ing_ids)):
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="El body contiene ingredientes duplicados",
                 )
 

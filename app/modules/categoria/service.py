@@ -99,7 +99,7 @@ class CategoriaService:
                 # Evitar ciclos: no puede ser su propio padre
                 if data.padre_id == categoria_id:
                     raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail="Una categoría no puede ser su propio padre",
                     )
                 self._validate_parent(uow, data.padre_id)

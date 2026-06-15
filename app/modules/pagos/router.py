@@ -1,9 +1,12 @@
+import hashlib
+import hmac
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlmodel import Session
 
 from app.core.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_session
 from app.modules.pagos.schemas import (
     CrearPagoRequest,
@@ -32,7 +35,7 @@ async def crear_pago(
     svc: PagoService = Depends(get_pago_service),
 ) -> PagoCrearResponse:
     usuario_id = int(payload["uid"])
-    return await svc.crear_pago(data.pedido_id, usuario_id)
+    return await svc.crear_pago(data, usuario_id)
 
 
 @router.post(
@@ -45,6 +48,33 @@ async def webhook(
 ) -> dict:
     body = await request.json()
     query_params = dict(request.query_params)
+
+    secret = settings.mp_webhook_secret
+    if secret:
+        signature = request.headers.get("x-signature", "")
+        request_id = request.headers.get("x-request-id", "")
+        parts = dict(
+            p.strip().split("=", 1)
+            for p in signature.split(",") if "=" in p
+        )
+        ts = parts.get("ts", "")
+        v1 = parts.get("v1", "")
+        data_id = (
+            query_params.get("data.id")
+            or (body.get("data") or {}).get("id")
+            or body.get("id")
+            or ""
+        )
+        manifest = f"id:{data_id};request-id:{request_id};ts:{ts};"
+        expected = hmac.new(
+            secret.encode(), manifest.encode(), hashlib.sha256,
+        ).hexdigest()
+        if not v1 or not hmac.compare_digest(expected, v1):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Firma MercadoPago inválida",
+            )
+
     return await svc.procesar_webhook(body, query_params)
 
 

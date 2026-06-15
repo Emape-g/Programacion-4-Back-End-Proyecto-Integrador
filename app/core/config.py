@@ -19,9 +19,10 @@ class Settings(BaseSettings):
 
     cors_origins: str = '["http://localhost:5173"]'
 
-    mp_access_token: str = "APP_USR-3547079904979455-061507-dfc52d9894c4bd1d2c6e817bf387e218-2611950632"
-    mp_public_key: str = "APP_USR-08de3c81-7821-4b18-8382-cdb27d819290"
-    mp_notification_url: str = "https://heavy-stars-follow.loca.lt/api/v1/pagos/webhook"
+    mp_access_token: str = ""
+    mp_public_key: str = ""
+    mp_notification_url: str = ""
+    mp_webhook_secret: str = ""
 
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""

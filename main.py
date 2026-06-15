@@ -6,6 +6,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.database import create_db_and_tables, engine
+from app.core.errors import register_exception_handlers
 from app.db.seed import (
     seed_admin_usuario,
     seed_estados_pedido,
@@ -62,6 +63,8 @@ app = FastAPI(
     lifespan=lifespan,
     swagger_ui_parameters={"withCredentials": True},
 )
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
