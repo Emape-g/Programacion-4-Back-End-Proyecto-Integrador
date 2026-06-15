@@ -96,6 +96,7 @@ class PagoService:
                 "mp_status": response.get("status"),
                 "mp_status_detail": response.get("status_detail"),
                 "mp_merchant_order_id": response.get("merchant_order_id"),
+                "external_reference": response.get("external_reference"),
             }
 
         except ImportError:
@@ -190,7 +191,7 @@ class PagoService:
         if not pago_mp_id:
             return {"status": "ignored", "reason": "No payment ID"}
 
-        if topic not in (None, "payment", "merchant_order"):
+        if topic not in (None, "payment"):
             return {"status": "ignored", "reason": f"Topic: {topic}"}
 
         try:
@@ -208,6 +209,13 @@ class PagoService:
                     pago = uow.pagos.get_by_mp_merchant_order_id(
                         mp_info["mp_merchant_order_id"]
                     )
+
+                if not pago and mp_info.get("external_reference"):
+                    try:
+                        pedido_ref_id = int(mp_info["external_reference"])
+                        pago = uow.pagos.get_ultimo_by_pedido(pedido_ref_id)
+                    except (ValueError, TypeError):
+                        pago = None
 
                 if not pago:
                     return {"status": "ignored", "reason": "Pago not found in local DB"}
