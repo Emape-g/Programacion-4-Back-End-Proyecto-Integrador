@@ -8,6 +8,8 @@ from sqlmodel import Session, select
 from app.modules.detalle_pedido.models import DetallePedido
 from app.modules.pedido.models import Pago, Pedido
 
+VENTA_ESTADOS = ["CONFIRMADO", "EN_PREP", "ENTREGADO"]
+
 
 class EstadisticasRepository:
     def __init__(self, session: Session) -> None:
@@ -24,7 +26,7 @@ class EstadisticasRepository:
                 func.count(Pedido.id).label("cantidad_pedidos"),
             )
             .where(
-                Pedido.estado_codigo != "CANCELADO",
+                Pedido.estado_codigo.in_(VENTA_ESTADOS),
                 Pedido.deleted_at.is_(None),
                 func.cast(Pedido.created_at, Date).between(desde, hasta),
             )
@@ -50,7 +52,7 @@ class EstadisticasRepository:
             )
             .join(Pedido, Pedido.id == DetallePedido.pedido_id)
             .where(
-                Pedido.estado_codigo != "CANCELADO",
+                Pedido.estado_codigo.in_(VENTA_ESTADOS),
                 Pedido.deleted_at.is_(None),
             )
             .group_by(DetallePedido.nombre_snapshot)
@@ -94,7 +96,7 @@ class EstadisticasRepository:
             .join(Pago, Pago.pedido_id == Pedido.id)
             .where(
                 Pago.estado == "aprobado",
-                Pedido.estado_codigo != "CANCELADO",
+                Pedido.estado_codigo.in_(VENTA_ESTADOS),
                 Pedido.deleted_at.is_(None),
             )
         )
@@ -123,7 +125,7 @@ class EstadisticasRepository:
 
         ventas_hoy = self.session.exec(
             select(func.coalesce(func.sum(Pedido.total), 0)).where(
-                Pedido.estado_codigo != "CANCELADO",
+                Pedido.estado_codigo.in_(VENTA_ESTADOS),
                 Pedido.deleted_at.is_(None),
                 Pedido.created_at >= today_start,
                 Pedido.created_at < tomorrow_start,
@@ -132,7 +134,7 @@ class EstadisticasRepository:
 
         ventas_mes = self.session.exec(
             select(func.coalesce(func.sum(Pedido.total), 0)).where(
-                Pedido.estado_codigo != "CANCELADO",
+                Pedido.estado_codigo.in_(VENTA_ESTADOS),
                 Pedido.deleted_at.is_(None),
                 Pedido.created_at >= month_start,
             )
@@ -140,7 +142,7 @@ class EstadisticasRepository:
 
         count_no_cancelados = self.session.exec(
             select(func.count(Pedido.id)).where(
-                Pedido.estado_codigo != "CANCELADO",
+                Pedido.estado_codigo.in_(VENTA_ESTADOS),
                 Pedido.deleted_at.is_(None),
             )
         ).one()

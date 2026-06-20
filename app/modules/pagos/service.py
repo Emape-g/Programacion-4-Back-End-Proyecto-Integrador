@@ -40,6 +40,24 @@ class PagoService:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    def _discount_stock(self, uow: PedidoUnitOfWork, pedido_id: int) -> None:
+        items = uow.detalles.get_by_pedido(pedido_id)
+        for item in items:
+            producto = uow.productos.get_by_id(item.producto_id)
+            if not producto:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Producto id={item.producto_id} no encontrado",
+                )
+            if producto.stock_cantidad < item.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para '{producto.nombre}' "
+                           f"(disponible: {producto.stock_cantidad}, pedido: {item.cantidad})",
+                )
+            producto.stock_cantidad -= item.cantidad
+            uow.productos.add(producto)
+
     # ── Comunicación con SDK de MercadoPago ─────────────────────────────
 
     def _crear_preferencia_mp(self, monto: float, titulo: str,
@@ -256,6 +274,7 @@ class PagoService:
 
             pedido_confirmado = False
             if nuevo_estado == "aprobado" and pedido.estado_codigo == "PENDIENTE":
+                self._discount_stock(uow, pedido.id)
                 pedido.estado_codigo = "CONFIRMADO"
                 pedido.updated_at = datetime.now(timezone.utc)
                 uow.pedidos.add(pedido)
@@ -356,6 +375,7 @@ class PagoService:
                 if nuevo_estado == "aprobado":
                     pedido = uow.pedidos.get_by_id(pago.pedido_id)
                     if pedido and pedido.estado_codigo == "PENDIENTE":
+                        self._discount_stock(uow, pedido.id)
                         pedido.estado_codigo = "CONFIRMADO"
                         pedido.updated_at = datetime.now(timezone.utc)
                         uow.pedidos.add(pedido)
@@ -432,6 +452,7 @@ class PagoService:
                     uow.pagos.add(pago)
 
                     if nuevo_estado == "aprobado" and pedido.estado_codigo == "PENDIENTE":
+                        self._discount_stock(uow, pedido.id)
                         pedido.estado_codigo = "CONFIRMADO"
                         pedido.updated_at = datetime.now(timezone.utc)
                         uow.pedidos.add(pedido)

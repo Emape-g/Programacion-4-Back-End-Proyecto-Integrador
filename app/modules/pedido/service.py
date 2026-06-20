@@ -27,6 +27,8 @@ TRANSITIONS: dict[str, list[str]] = {
     "CANCELADO":  [],
 }
 
+STOCK_CONFIRMED_STATES = {"CONFIRMADO", "EN_PREP", "ENTREGADO"}
+
 
 class PedidoService:
     def __init__(self, session: Session) -> None:
@@ -75,6 +77,24 @@ class PedidoService:
             if producto:
                 producto.stock_cantidad += item.cantidad
                 uow.productos.add(producto)
+
+    def _discount_stock(self, uow: PedidoUnitOfWork, pedido_id: int) -> None:
+        items = uow.detalles.get_by_pedido(pedido_id)
+        for item in items:
+            producto = uow.productos.get_by_id(item.producto_id)
+            if not producto:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Producto id={item.producto_id} no encontrado",
+                )
+            if producto.stock_cantidad < item.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para '{producto.nombre}' "
+                           f"(disponible: {producto.stock_cantidad}, pedido: {item.cantidad})",
+                )
+            producto.stock_cantidad -= item.cantidad
+            uow.productos.add(producto)
 
     def _build_read(self, pedido: Pedido) -> PedidoRead:
         return PedidoRead.model_validate(pedido)
@@ -152,9 +172,6 @@ class PedidoService:
                     "subtotal_snap": sub,
                     "personalizacion": item.personalizacion,
                 })
-
-                producto.stock_cantidad -= item.cantidad
-                uow.productos.add(producto)
 
             descuento = Decimal("0.00")
             costo_envio = Decimal("50.00")
@@ -276,7 +293,10 @@ class PedidoService:
                     detail="El campo 'motivo' es obligatorio al cancelar un pedido",
                 )
 
-            if nuevo_estado == "CANCELADO":
+            if estado_actual == "PENDIENTE" and nuevo_estado == "CONFIRMADO":
+                self._discount_stock(uow, pedido.id)
+
+            if nuevo_estado == "CANCELADO" and estado_actual in STOCK_CONFIRMED_STATES:
                 self._restore_stock(uow, pedido.id)
 
             pedido.estado_codigo = nuevo_estado
@@ -325,7 +345,8 @@ class PedidoService:
                 )
 
             estado_anterior = pedido.estado_codigo
-            self._restore_stock(uow, pedido.id)
+            if estado_anterior in STOCK_CONFIRMED_STATES:
+                self._restore_stock(uow, pedido.id)
             pedido.estado_codigo = "CANCELADO"
             pedido.updated_at = datetime.now(timezone.utc)
             uow.pedidos.add(pedido)
