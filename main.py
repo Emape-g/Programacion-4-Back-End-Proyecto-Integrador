@@ -6,6 +6,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.database import create_db_and_tables, engine
+from app.core.errors import register_exception_handlers
 from app.db.seed import (
     seed_admin_usuario,
     seed_estados_pedido,
@@ -14,32 +15,33 @@ from app.db.seed import (
     seed_unidades_medida,
 )
 
-# Importar todos los modelos antes de create_all para que SQLModel.metadata
-# los registre y resuelva las relationships con strings.
 from app.modules.categoria.models import Categoria  # noqa: F401
-from app.modules.categoria.router import router as categoria_router
-from app.modules.detalle_pedido.router import router as detalle_pedido_router
-from app.modules.estado_pedido.router import router as estado_pedido_router
-from app.modules.forma_de_pago.router import router as forma_de_pago_router
 from app.modules.ingrediente.models import Ingrediente  # noqa: F401
-from app.modules.ingrediente.router import router as ingrediente_router
-from app.modules.pedido.models import HistorialEstadoPedido  # noqa: F401
-from app.modules.pedido.router import router as pedido_router
+from app.modules.pedido.models import HistorialEstadoPedido, Pago  # noqa: F401
 from app.modules.producto.models import Producto  # noqa: F401
-from app.modules.producto.router import router as producto_router
 from app.modules.rol.models import Rol  # noqa: F401
-from app.modules.rol.router import router as rol_router
 from app.modules.unidad_medida.models import UnidadMedida  # noqa: F401
-from app.modules.unidad_medida.router import router as unidad_medida_router
 from app.modules.usuario.models import (  # noqa: F401
     DireccionEntrega,
     RefreshToken,
     Usuario,
     UsuarioRol,
 )
-from app.modules.usuario.router import router as usuario_router
 
-print(settings.DATABASE_URL)
+from app.modules.categoria.router import router as categoria_router
+from app.modules.detalle_pedido.router import router as detalle_pedido_router
+from app.modules.estado_pedido.router import router as estado_pedido_router
+from app.modules.estadisticas.router import router as estadisticas_router
+from app.modules.forma_de_pago.router import router as forma_de_pago_router
+from app.modules.ingrediente.router import router as ingrediente_router
+from app.modules.pagos.router import router as pagos_router
+from app.modules.pedido.router import router as pedido_router
+from app.modules.producto.router import router as producto_router
+from app.modules.rol.router import router as rol_router
+from app.modules.unidad_medida.router import router as unidad_medida_router
+from app.modules.uploads.router import router as uploads_router
+from app.modules.usuario.router import router as usuario_router
+from app.core.ws_router import router as ws_router
 
 
 @asynccontextmanager
@@ -55,30 +57,36 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Catálogo de Productos API",
-    description="Parcial 2 — FastAPI + SQLModel + PostgreSQL",
-    version="2.0.0",
+    title="Food Store API",
+    description="Sistema de Gestión de Pedidos de Comida — v6.0",
+    version="6.0.0",
     lifespan=lifespan,
     swagger_ui_parameters={"withCredentials": True},
 )
 
+register_exception_handlers(app)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # origen exacto requerido para cookies
-    allow_credentials=True,                   # permite envío de cookies entre origen y API
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 API_V1 = "/api/v1"
 
-app.include_router(usuario_router,       prefix=f"{API_V1}/auth",           tags=["auth"])
-app.include_router(rol_router,           prefix=f"{API_V1}/roles",          tags=["roles"])
-app.include_router(unidad_medida_router, prefix=f"{API_V1}/unidades-medida",tags=["unidades de medida"])
-app.include_router(categoria_router,     prefix=f"{API_V1}/categorias",     tags=["categorias"])
-app.include_router(ingrediente_router,   prefix=f"{API_V1}/ingredientes",   tags=["ingredientes"])
-app.include_router(producto_router,      prefix=f"{API_V1}/productos",      tags=["productos"])
-app.include_router(forma_de_pago_router, prefix=f"{API_V1}/formas-de-pago", tags=["formas de pago"])
-app.include_router(estado_pedido_router, prefix=f"{API_V1}/estados-pedido", tags=["estados de pedido"])
-app.include_router(pedido_router,        prefix=f"{API_V1}/pedidos",        tags=["pedidos"])
-app.include_router(detalle_pedido_router,prefix=f"{API_V1}/pedidos",        tags=["pedidos"])
+app.include_router(usuario_router,        prefix=f"{API_V1}/auth",             tags=["auth"])
+app.include_router(rol_router,            prefix=f"{API_V1}/roles",            tags=["roles"])
+app.include_router(unidad_medida_router,  prefix=f"{API_V1}/unidades-medida",  tags=["unidades de medida"])
+app.include_router(categoria_router,      prefix=f"{API_V1}/categorias",       tags=["categorias"])
+app.include_router(ingrediente_router,    prefix=f"{API_V1}/ingredientes",     tags=["ingredientes"])
+app.include_router(producto_router,       prefix=f"{API_V1}/productos",        tags=["productos"])
+app.include_router(forma_de_pago_router,  prefix=f"{API_V1}/formas-de-pago",   tags=["formas de pago"])
+app.include_router(estado_pedido_router,  prefix=f"{API_V1}/estados-pedido",   tags=["estados de pedido"])
+app.include_router(pedido_router,         prefix=f"{API_V1}/pedidos",          tags=["pedidos"])
+app.include_router(detalle_pedido_router, prefix=f"{API_V1}/pedidos",          tags=["pedidos"])
+app.include_router(pagos_router,          prefix=f"{API_V1}/pagos",            tags=["pagos"])
+app.include_router(uploads_router,        prefix=f"{API_V1}/uploads",          tags=["uploads"])
+app.include_router(estadisticas_router,   prefix=f"{API_V1}/estadisticas",     tags=["estadisticas"])
+app.include_router(ws_router,             tags=["websocket"])

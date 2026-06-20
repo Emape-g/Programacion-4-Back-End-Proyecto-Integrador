@@ -1,7 +1,11 @@
 from sqlmodel import Session
 
 from app.core.unit_of_work import UnitOfWork
-from app.modules.pedido.repository import PedidoRepository, HistorialEstadoPedidoRepository
+from app.modules.pedido.repository import (
+    PedidoRepository,
+    HistorialEstadoPedidoRepository,
+    PagoRepository,
+)
 from app.modules.detalle_pedido.repository import DetallePedidoRepository
 from app.modules.forma_de_pago.repository import FormaDePagoRepository
 from app.modules.estado_pedido.repository import EstadoPedidoRepository
@@ -10,7 +14,6 @@ from app.modules.usuario.repository import DireccionEntregaRepository
 
 
 class PedidoUnitOfWork(UnitOfWork):
-
     def __init__(self, session: Session) -> None:
         super().__init__(session)
         self.pedidos = PedidoRepository(session)
@@ -20,3 +23,4 @@ class PedidoUnitOfWork(UnitOfWork):
         self.productos = ProductoRepository(session)
         self.historial = HistorialEstadoPedidoRepository(session)
         self.direcciones = DireccionEntregaRepository(session)
+        self.pagos = PagoRepository(session)

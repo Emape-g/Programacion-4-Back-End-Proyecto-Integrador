@@ -15,14 +15,14 @@ from sqlmodel import Field, SQLModel
 class UsuarioCreate(SQLModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    nombre: str = Field(min_length=1, max_length=80)
-    apellido: str = Field(min_length=1, max_length=80)
+    nombre: str = Field(min_length=2, max_length=80)
+    apellido: str = Field(min_length=2, max_length=80)
     celular: Optional[str] = Field(default=None, max_length=20)
 
 
 class UsuarioUpdate(SQLModel):
-    nombre: Optional[str] = Field(default=None, min_length=1, max_length=80)
-    apellido: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    nombre: Optional[str] = Field(default=None, min_length=2, max_length=80)
+    apellido: Optional[str] = Field(default=None, min_length=2, max_length=80)
     celular: Optional[str] = Field(default=None, max_length=20)
 
 
@@ -51,11 +51,22 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenPair(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+
+TokenPair = TokenResponse
+
+
+class UserResponse(SQLModel):
+    id: int
+    nombre: str
+    apellido: str
+    email: str
+    roles: List[str] = []
+    created_at: datetime
 
 
 class RefreshRequest(BaseModel):

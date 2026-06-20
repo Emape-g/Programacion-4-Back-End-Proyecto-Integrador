@@ -1,84 +1,92 @@
 from typing import Optional, List
 from datetime import datetime
+from decimal import Decimal
 from sqlmodel import SQLModel, Field
 
 
-# ── Schemas de DetallePedido ──────────────────────────────────────────────────
-
-class DetallePedidoCreate(SQLModel):
-    """Ítem enviado por el cliente al crear un pedido."""
+class ItemPedidoRequest(SQLModel):
     producto_id: int
     cantidad: int = Field(ge=1)
-    personalizacion: Optional[List[int]] = None   # IDs de ingredientes removidos
-
-
-class DetallePedidoPublic(SQLModel):
-    """Ítem devuelto en la respuesta. Incluye los snapshots."""
-    producto_id: int
-    cantidad: int
-    nombre_snapshot: str
-    precio_snapshot: float
-    subtotal_snap: float
     personalizacion: Optional[List[int]] = None
-    created_at: datetime
+
+
+class CrearPedidoRequest(SQLModel):
+    items: List[ItemPedidoRequest] = Field(min_length=1)
+    forma_pago_codigo: str
+    direccion_id: Optional[int] = None
+    notas: Optional[str] = None
+
+
+class AvanzarEstadoRequest(SQLModel):
+    nuevo_estado: str
+    motivo: Optional[str] = None
+
+
+class DetallePedidoRead(SQLModel):
+    producto_id: int
+    nombre_snapshot: str
+    precio_snapshot: Decimal
+    subtotal_snap: Decimal
+    cantidad: int
+    personalizacion: Optional[List[int]] = None
 
     model_config = {"from_attributes": True}
 
 
-# ── Schemas de Pedido ─────────────────────────────────────────────────────────
-
-class PedidoCreate(SQLModel):
-    """Payload para crear un pedido. Los precios los calcula el servidor."""
-    usuario_id: int
-    forma_pago_codigo: str
-    direccion_entrega_id: Optional[int] = None
-    notas: Optional[str] = None
-    detalles: List[DetallePedidoCreate] = Field(min_length=1)
-
-
-class CambiarEstadoRequest(SQLModel):
-    """Payload para avanzar el estado de un pedido por el FSM."""
+class HistorialRead(SQLModel):
+    id: int
+    estado_desde: Optional[str] = None
     estado_hacia: str
-    motivo: Optional[str] = None   # Obligatorio si estado_hacia == CANCELADO (RN-05)
-
-
-class PedidoPublic(SQLModel):
-    """Respuesta compacta para listados."""
-    id: int
-    usuario_id: int
-    direccion_entrega_id: Optional[int] = None
-    estado_codigo: str
-    forma_pago_codigo: str
-    subtotal: float
-    descuento: float
-    costo_envio: float
-    total: float
-    notas: Optional[str] = None
+    motivo: Optional[str] = None
+    usuario_id: Optional[int] = None
     created_at: datetime
-    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class PedidoDetalle(SQLModel):
-    """Respuesta completa con los ítems del pedido."""
+class PagoRead(SQLModel):
+    id: int
+    monto: Decimal
+    estado: str
+    mp_preference_id: Optional[str] = None
+    mp_payment_id: Optional[int] = None
+    mp_status: Optional[str] = None
+    mp_status_detail: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PedidoRead(SQLModel):
+    id: int
+    estado_codigo: str
+    subtotal: Decimal
+    descuento: Decimal
+    costo_envio: Decimal
+    total: Decimal
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PedidoDetail(SQLModel):
     id: int
     usuario_id: int
-    direccion_entrega_id: Optional[int] = None
     estado_codigo: str
-    forma_pago_codigo: str
-    subtotal: float
-    descuento: float
-    costo_envio: float
-    total: float
-    notas: Optional[str] = None
-    detalles: List[DetallePedidoPublic] = []
+    subtotal: Decimal
+    descuento: Decimal
+    costo_envio: Decimal
+    total: Decimal
+    items: List[DetallePedidoRead] = []
+    historial: List[HistorialRead] = []
+    pago: Optional[PagoRead] = None
     created_at: datetime
-    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
 class PedidoList(SQLModel):
-    data: List[PedidoPublic]
+    items: List[PedidoRead]
     total: int
+    page: int
+    size: int

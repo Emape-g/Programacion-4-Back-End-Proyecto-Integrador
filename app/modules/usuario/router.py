@@ -8,18 +8,21 @@
 #   - Direcciones:           /usuarios/{id}/direcciones, /direcciones/{id}
 from typing import Annotated, List
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response, status
 from sqlmodel import Session
 
 from app.core.auth import get_current_user, require_role
 from app.core.database import get_session
 from app.core.auth import decode_token
+from app.core.rate_limit import auth_rate_limiter
 from app.modules.usuario.schemas import (
     DireccionEntregaCreate,
     DireccionEntregaList,
     DireccionEntregaPublic,
     DireccionEntregaUpdate,
     LoginRequest,
+    TokenResponse,
+    UserResponse,
     UsuarioCreate,
     UsuarioList,
     UsuarioPublic,
@@ -52,28 +55,40 @@ def _actor(payload: dict) -> tuple[int, set[str]]:
 
 @router.post(
     "/register",
-    response_model=UsuarioPublic,
+    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Registro de cliente (rol CLIENT auto)",
 )
 def register(
     data: UsuarioCreate,
+    request: Request,
     svc: UsuarioService = Depends(get_usuario_service),
-) -> UsuarioPublic:
-    return svc.register(data)
+) -> UserResponse:
+    auth_rate_limiter.check(request)
+    usuario = svc.register(data)
+    return UserResponse(
+        id=usuario.id,
+        nombre=usuario.nombre,
+        apellido=usuario.apellido,
+        email=usuario.email,
+        roles=usuario.roles,
+        created_at=usuario.created_at,
+    )
 
 
 @router.post(
     "/login",
-    response_model=UsuarioPublic,
-    summary="Login — setea cookies httpOnly con access + refresh token",
+    response_model=TokenResponse,
+    summary="Login — retorna tokens y setea cookies httpOnly",
 )
 def login(
     data: LoginRequest,
+    request: Request,
     response: Response,
     svc: UsuarioService = Depends(get_usuario_service),
-) -> UsuarioPublic:
+) -> TokenResponse:
     from app.core.config import settings
+    auth_rate_limiter.check(request)
     tokens = svc.login(data)
     response.set_cookie(
         key="access_token",
@@ -88,23 +103,21 @@ def login(
         httponly=True,
         samesite="lax",
         max_age=settings.refresh_token_expire_days * 24 * 3600,
-        path="/auth/refresh",
+        path="/api/v1/auth/refresh",
     )
-    payload = decode_token(tokens.access_token)
-    uid, _ = _actor(payload)
-    return svc.me(uid)
+    return tokens
 
 
 @router.post(
     "/refresh",
-    response_model=UsuarioPublic,
-    summary="Rotar tokens usando cookie refresh_token",
+    response_model=TokenResponse,
+    summary="Rotar tokens usando refresh_token",
 )
 def refresh(
     response: Response,
     refresh_token: str | None = Cookie(default=None),
     svc: UsuarioService = Depends(get_usuario_service),
-) -> UsuarioPublic:
+) -> TokenResponse:
     from app.core.config import settings
     if not refresh_token:
         raise HTTPException(
@@ -125,11 +138,9 @@ def refresh(
         httponly=True,
         samesite="lax",
         max_age=settings.refresh_token_expire_days * 24 * 3600,
-        path="/auth/refresh",
+        path="/api/v1/auth/refresh",
     )
-    payload = decode_token(tokens.access_token)
-    uid, _ = _actor(payload)
-    return svc.me(uid)
+    return tokens
 
 
 @router.post(
@@ -146,7 +157,7 @@ def logout(
     if refresh_token:
         svc.logout(refresh_token)
     response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token", path="/auth/refresh")
+    response.delete_cookie(key="refresh_token", path="/api/v1/auth/refresh")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -34,7 +34,7 @@ class ProductoService:
 
     def _get_or_404(self, uow: ProductoUnitOfWork, producto_id: int) -> Producto:
         p = uow.productos.get_by_id(producto_id)
-        if not p:
+        if not p or p.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Producto con id={producto_id} no encontrado",
@@ -59,7 +59,7 @@ class ProductoService:
             )
         if ing.deleted_at is not None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Ingrediente con id={ingrediente_id} fue dado de baja",
             )
 
@@ -187,7 +187,7 @@ class ProductoService:
             # Un producto debe tener al menos 1 ingrediente
             if not data.ingredientes:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="El producto debe tener al menos un ingrediente",
                 )
             # Validar FKs antes de insertar
@@ -198,7 +198,7 @@ class ProductoService:
             ing_ids = [ing.ingrediente_id for ing in data.ingredientes]
             if len(ing_ids) != len(set(ing_ids)):
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="El body contiene ingredientes duplicados",
                 )
 
@@ -245,12 +245,13 @@ class ProductoService:
         limit: int = 20,
         disponible: Optional[bool] = None,
         nombre: Optional[str] = None,
+        categoria_id: Optional[int] = None,
     ) -> ProductoList:
         with ProductoUnitOfWork(self._session) as uow:
             items = uow.productos.get_all_filtered(
-                offset=offset, limit=limit, disponible=disponible, nombre=nombre
+                offset=offset, limit=limit, disponible=disponible, nombre=nombre, categoria_id=categoria_id
             )
-            total = uow.productos.count()
+            total = uow.productos.count(disponible=disponible, nombre=nombre, categoria_id=categoria_id)
             result = ProductoList(
                 data=[self._build_public(uow, p) for p in items],
                 total=total,
