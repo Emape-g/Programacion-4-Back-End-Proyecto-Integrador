@@ -61,7 +61,7 @@ class PagoService:
     # ── Comunicación con SDK de MercadoPago ─────────────────────────────
 
     def _crear_preferencia_mp(self, monto: float, titulo: str,
-                               pedido_id: int,
+                               external_reference: str,
                                idempotency_key: str | None = None) -> dict:
         access_token = settings.mp_access_token
         if not access_token:
@@ -73,6 +73,9 @@ class PagoService:
         try:
             sdk = mercadopago.SDK(access_token)
 
+            success_url = settings.mp_back_url_success
+            is_public_url = success_url.startswith("https://") and "localhost" not in success_url
+
             preference_data = {
                 "items": [{
                     "title": titulo,
@@ -80,9 +83,17 @@ class PagoService:
                     "unit_price": float(monto),
                     "currency_id": "ARS",
                 }],
-                "external_reference": str(pedido_id),
-                "notification_url": settings.mp_notification_url,
+                "external_reference": external_reference,
+                "back_urls": {
+                    "success": success_url,
+                    "failure": settings.mp_back_url_failure,
+                    "pending": settings.mp_back_url_pending,
+                },
+                "notification_url": settings.mp_notification_url or None,
             }
+            if is_public_url:
+                preference_data["auto_return"] = "approved"
+            preference_data = {k: v for k, v in preference_data.items() if v is not None}
 
             request_options = None
             if idempotency_key:
@@ -233,81 +244,45 @@ class PagoService:
                 )
 
             idempotency_key = str(uuid.uuid4())
-            external_reference = str(uuid.uuid4())
-
-            payment_data = {
-                "transaction_amount": float(pedido.total),
-                "token": data.token,
-                "description": f"Pedido #{pedido.id} - Food Store",
-                "installments": data.installments or 1,
-                "payment_method_id": data.payment_method_id,
-                "payer": {"email": data.payer_email} if data.payer_email else None,
-                "external_reference": external_reference,
-                "notification_url": settings.mp_notification_url or None,
-            }
-            payment_data = {k: v for k, v in payment_data.items() if v is not None}
+            external_reference = f"pedido-{pedido.id}-{uuid.uuid4().hex[:8]}"
+            titulo = f"Pedido #{pedido.id} - Food Store"
 
             try:
-                mp_info = self._crear_payment_mp(payment_data, idempotency_key)
+                mp_info = self._crear_preferencia_mp(
+                    monto=float(pedido.total),
+                    titulo=titulo,
+                    external_reference=external_reference,
+                    idempotency_key=idempotency_key,
+                )
             except RuntimeError as e:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=str(e),
                 )
 
-            estado_mp = mp_info.get("mp_status")
-            nuevo_estado = MP_STATUS_MAP.get(estado_mp, "pendiente")
-
             pago = Pago(
                 pedido_id=pedido.id,
                 external_reference=external_reference,
                 transaction_amount=pedido.total,
-                payment_method_id=data.payment_method_id,
                 monto=pedido.total,
-                estado=nuevo_estado,
-                mp_payment_id=mp_info.get("mp_payment_id"),
-                mp_status=estado_mp,
-                mp_status_detail=mp_info.get("mp_status_detail"),
+                estado="pendiente",
+                mp_preference_id=mp_info.get("preference_id"),
+                mp_init_point=mp_info.get("init_point"),
                 idempotency_key=idempotency_key,
             )
             uow.pagos.add(pago)
 
-            pedido_confirmado = False
-            if nuevo_estado == "aprobado" and pedido.estado_codigo == "PENDIENTE":
-                self._discount_stock(uow, pedido.id)
-                pedido.estado_codigo = "CONFIRMADO"
-                pedido.updated_at = datetime.now(timezone.utc)
-                uow.pedidos.add(pedido)
-                uow.historial.add(HistorialEstadoPedido(
-                    pedido_id=pedido.id,
-                    estado_desde="PENDIENTE",
-                    estado_hacia="CONFIRMADO",
-                    motivo="Pago aprobado por MercadoPago",
-                    usuario_id=usuario_id,
-                ))
-                pedido_confirmado = True
-
             response = PagoCrearResponse(
                 pago_id=pago.id,
-                mp_payment_id=mp_info.get("mp_payment_id"),
-                mp_status=estado_mp,
-                mp_status_detail=mp_info.get("mp_status_detail"),
+                pedido_id=pedido.id,
+                mp_preference_id=mp_info.get("preference_id"),
+                init_point=mp_info.get("init_point"),
                 external_reference=external_reference,
                 idempotency_key=idempotency_key,
                 transaction_amount=pedido.total,
+                estado="pendiente",
                 public_key=settings.mp_public_key,
             )
-
-        if pedido_confirmado:
-            await ws_manager.broadcast_pedido(pedido.id, {
-                "event": "pago_confirmado",
-                "pedido_id": pedido.id,
-                "estado_anterior": "PENDIENTE",
-                "estado_nuevo": "CONFIRMADO",
-                "usuario_id": usuario_id,
-                "motivo": "Pago aprobado por MercadoPago",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
 
         return response
 
@@ -352,11 +327,18 @@ class PagoService:
                     )
 
                 if not pago and mp_info.get("external_reference"):
-                    try:
-                        pedido_ref_id = int(mp_info["external_reference"])
-                        pago = uow.pagos.get_ultimo_by_pedido(pedido_ref_id)
-                    except (ValueError, TypeError):
-                        pago = None
+                    ext_ref = mp_info["external_reference"]
+                    pago = uow.pagos.get_by_external_reference(ext_ref) \
+                        if hasattr(uow.pagos, "get_by_external_reference") else None
+                    if not pago:
+                        try:
+                            if ext_ref.startswith("pedido-"):
+                                pedido_ref_id = int(ext_ref.split("-")[1])
+                            else:
+                                pedido_ref_id = int(ext_ref)
+                            pago = uow.pagos.get_ultimo_by_pedido(pedido_ref_id)
+                        except (ValueError, TypeError, IndexError):
+                            pago = None
 
                 if not pago:
                     return {"status": "not_found", "reason": "Pago not found in local DB"}

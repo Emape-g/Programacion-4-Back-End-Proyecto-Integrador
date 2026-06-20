@@ -27,7 +27,7 @@ def get_pago_service(session: Session = Depends(get_session)) -> PagoService:
     "/crear",
     response_model=PagoCrearResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Crear preferencia de pago en MercadoPago",
+    summary="Crear preferencia MP (Checkout Pro). Devuelve init_point para redirigir",
 )
 async def crear_pago(
     data: CrearPagoRequest,

@@ -9,8 +9,12 @@ from app.core.database import create_db_and_tables, engine
 from app.core.errors import register_exception_handlers
 from app.db.seed import (
     seed_admin_usuario,
+    seed_categorias,
+    seed_cliente_demo,
     seed_estados_pedido,
     seed_formas_pago,
+    seed_ingredientes,
+    seed_productos,
     seed_roles,
     seed_unidades_medida,
 )
@@ -53,6 +57,10 @@ async def lifespan(app: FastAPI):
         seed_formas_pago(session)
         seed_estados_pedido(session)
         seed_admin_usuario(session)
+        seed_cliente_demo(session)
+        seed_categorias(session)
+        seed_ingredientes(session)
+        seed_productos(session)
     yield
 
 

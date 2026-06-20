@@ -1,25 +1,22 @@
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class CrearPagoRequest(BaseModel):
     pedido_id: int
-    token: Optional[str] = None
-    payment_method_id: Optional[str] = None
-    installments: Optional[int] = 1
-    payer_email: Optional[EmailStr] = None
 
 
 class PagoCrearResponse(BaseModel):
     pago_id: int
-    mp_payment_id: Optional[int] = None
-    mp_status: Optional[str] = None
-    mp_status_detail: Optional[str] = None
+    pedido_id: int
+    mp_preference_id: Optional[str] = None
+    init_point: Optional[str] = None
     external_reference: str
     idempotency_key: str
     transaction_amount: Decimal
+    estado: str = "pendiente"
     public_key: Optional[str] = None
 
 
