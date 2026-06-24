@@ -12,10 +12,13 @@ class WSManager:
     def __init__(self) -> None:
         self._pedido_connections: dict[int, set[WebSocket]] = {}
         self._admin_connections: set[WebSocket] = set()
+        self._producto_connections: set[WebSocket] = set()
 
     def connect(self, ws: WebSocket, channel: int | str) -> None:
         if channel == "admin":
             self._admin_connections.add(ws)
+        elif channel == "productos":
+            self._producto_connections.add(ws)
         else:
             pedido_id = int(channel)
             self._pedido_connections.setdefault(pedido_id, set()).add(ws)
@@ -23,6 +26,8 @@ class WSManager:
     def disconnect(self, ws: WebSocket, channel: int | str) -> None:
         if channel == "admin":
             self._admin_connections.discard(ws)
+        elif channel == "productos":
+            self._producto_connections.discard(ws)
         else:
             pedido_id = int(channel)
             conns = self._pedido_connections.get(pedido_id)
@@ -50,6 +55,14 @@ class WSManager:
                     await ws.send_text(payload)
                 except Exception:
                     logger.debug("WS send failed")
+
+    async def broadcast_productos(self, evento: dict[str, Any]) -> None:
+        payload = json.dumps(evento, default=str)
+        for ws in list(self._producto_connections):
+            try:
+                await ws.send_text(payload)
+            except Exception:
+                logger.debug("WS product send failed")
 
 
 ws_manager = WSManager()

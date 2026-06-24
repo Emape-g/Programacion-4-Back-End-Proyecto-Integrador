@@ -16,11 +16,25 @@ class Ingrediente(SQLModel, table=True):
     nombre: str = Field(min_length=2, max_length=100, unique=True)
     descripcion: Optional[str] = Field(default=None)
     es_alergeno: bool = Field(default=False)
-    stock_cantidad: int = Field(default=0, ge=0, nullable=False)
+    stock_cantidad: Decimal = Field(
+        default=Decimal("0.000"), max_digits=10, decimal_places=3, ge=0, nullable=False
+    )
+    unidad_medida_id: int = Field(
+        foreign_key="unidad_medida.id", nullable=False
+    )
+    precio_unitario: Decimal = Field(
+        max_digits=12,
+        decimal_places=4,
+        gt=0,
+        nullable=False,
+    )
 
 
     productos_link: List["ProductoIngrediente"] = Relationship(
         back_populates="ingrediente"
+    )
+    unidad_medida: Optional["UnidadMedida"] = Relationship(
+        back_populates="ingredientes"
     )
     
     #Auditoria

@@ -41,6 +41,19 @@ async def ws_admin_pedidos(websocket: WebSocket, token: str | None = None):
         ws_manager.disconnect(websocket, "admin")
 
 
+@router.websocket("/ws/productos")
+async def ws_productos(websocket: WebSocket):
+    await websocket.accept()
+    ws_manager.connect(websocket, "productos")
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        ws_manager.disconnect(websocket, "productos")
+
+
 @router.websocket("/ws/pedidos/{pedido_id}")
 async def ws_pedido(
     websocket: WebSocket,

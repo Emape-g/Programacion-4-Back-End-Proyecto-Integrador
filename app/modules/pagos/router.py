@@ -83,13 +83,13 @@ async def webhook(
     response_model=PagoEstadoResponse,
     summary="Confirmar/sincronizar estado de pago con MercadoPago",
 )
-def confirmar_pago(
+async def confirmar_pago(
     pedido_id: int,
     payment_id: Optional[int] = None,
     payload: dict = Depends(get_current_user),
     svc: PagoService = Depends(get_pago_service),
 ) -> PagoEstadoResponse:
-    return svc.confirmar_pago(pedido_id, payment_id)
+    return await svc.confirmar_pago(pedido_id, payment_id)
 
 
 @router.get(

@@ -27,6 +27,8 @@ TRANSITIONS: dict[str, list[str]] = {
     "CANCELADO":  [],
 }
 
+STOCK_CONFIRMED_STATES = {"CONFIRMADO", "EN_PREP", "ENTREGADO"}
+
 
 class PedidoService:
     def __init__(self, session: Session) -> None:
@@ -75,6 +77,47 @@ class PedidoService:
             if producto:
                 producto.stock_cantidad += item.cantidad
                 uow.productos.add(producto)
+
+            for receta in uow.producto_ingredientes.get_by_producto(item.producto_id):
+                ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
+                if ingrediente:
+                    ingrediente.stock_cantidad += receta.cantidad * item.cantidad
+                    uow.ingredientes.add(ingrediente)
+
+    def _discount_stock(self, uow: PedidoUnitOfWork, pedido_id: int) -> None:
+        items = uow.detalles.get_by_pedido(pedido_id)
+        for item in items:
+            producto = uow.productos.get_by_id(item.producto_id)
+            if not producto:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Producto id={item.producto_id} no encontrado",
+                )
+            if producto.stock_cantidad < item.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para '{producto.nombre}' "
+                           f"(disponible: {producto.stock_cantidad}, pedido: {item.cantidad})",
+                )
+            producto.stock_cantidad -= item.cantidad
+            uow.productos.add(producto)
+
+            for receta in uow.producto_ingredientes.get_by_producto(item.producto_id):
+                ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
+                if not ingrediente:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Ingrediente id={receta.ingrediente_id} no encontrado",
+                    )
+                cantidad_necesaria = receta.cantidad * item.cantidad
+                if ingrediente.stock_cantidad < cantidad_necesaria:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Stock insuficiente de ingrediente '{ingrediente.nombre}' "
+                               f"(disponible: {ingrediente.stock_cantidad}, necesario: {cantidad_necesaria})",
+                    )
+                ingrediente.stock_cantidad -= cantidad_necesaria
+                uow.ingredientes.add(ingrediente)
 
     def _build_read(self, pedido: Pedido) -> PedidoRead:
         return PedidoRead.model_validate(pedido)
@@ -152,9 +195,6 @@ class PedidoService:
                     "subtotal_snap": sub,
                     "personalizacion": item.personalizacion,
                 })
-
-                producto.stock_cantidad -= item.cantidad
-                uow.productos.add(producto)
 
             descuento = Decimal("0.00")
             costo_envio = Decimal("50.00")
@@ -276,8 +316,14 @@ class PedidoService:
                     detail="El campo 'motivo' es obligatorio al cancelar un pedido",
                 )
 
-            if nuevo_estado == "CANCELADO":
+            stock_changed = False
+            if estado_actual == "PENDIENTE" and nuevo_estado == "CONFIRMADO":
+                self._discount_stock(uow, pedido.id)
+                stock_changed = True
+
+            if nuevo_estado == "CANCELADO" and estado_actual in STOCK_CONFIRMED_STATES:
                 self._restore_stock(uow, pedido.id)
+                stock_changed = True
 
             pedido.estado_codigo = nuevo_estado
             pedido.updated_at = datetime.now(timezone.utc)
@@ -303,6 +349,12 @@ class PedidoService:
             "motivo": data.motivo,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
+        if stock_changed:
+            await ws_manager.broadcast_productos({
+                "event": "stock_actualizado",
+                "pedido_id": result.id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
 
         return result
 
@@ -325,7 +377,10 @@ class PedidoService:
                 )
 
             estado_anterior = pedido.estado_codigo
-            self._restore_stock(uow, pedido.id)
+            stock_changed = False
+            if estado_anterior in STOCK_CONFIRMED_STATES:
+                self._restore_stock(uow, pedido.id)
+                stock_changed = True
             pedido.estado_codigo = "CANCELADO"
             pedido.updated_at = datetime.now(timezone.utc)
             uow.pedidos.add(pedido)
@@ -349,5 +404,11 @@ class PedidoService:
             "motivo": motivo or "Cancelado por el cliente",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
+        if stock_changed:
+            await ws_manager.broadcast_productos({
+                "event": "stock_actualizado",
+                "pedido_id": result.id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
 
         return result
