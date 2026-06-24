@@ -46,12 +46,12 @@ class HistorialRead(SQLModel):
 
 class PagoRead(SQLModel):
     id: int
+    monto: Decimal
+    estado: str
+    mp_preference_id: Optional[str] = None
     mp_payment_id: Optional[int] = None
-    mp_status: str
+    mp_status: Optional[str] = None
     mp_status_detail: Optional[str] = None
-    transaction_amount: Decimal
-    payment_method_id: Optional[str] = None
-    external_reference: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -71,6 +71,7 @@ class PedidoRead(SQLModel):
 
 class PedidoDetail(SQLModel):
     id: int
+    usuario_id: int
     estado_codigo: str
     subtotal: Decimal
     descuento: Decimal

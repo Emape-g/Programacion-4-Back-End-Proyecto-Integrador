@@ -67,13 +67,14 @@ def seed_admin_usuario(session: Session) -> None:
 
 def seed_unidades_medida(session: Session) -> None:
     changed = False
-    for nombre, simbolo, tipo in UNIDADES_MEDIDA_SEED:
-        existente = session.exec(
-            select(UnidadMedida).where(UnidadMedida.simbolo == simbolo)
-        ).first()
-        if not existente:
-            session.add(UnidadMedida(nombre=nombre, simbolo=simbolo, tipo=tipo))
-            changed = True
+    with session.no_autoflush:
+        for nombre, simbolo, tipo in UNIDADES_MEDIDA_SEED:
+            existente = session.exec(
+                select(UnidadMedida).where(UnidadMedida.nombre == nombre)
+            ).first()
+            if not existente:
+                session.add(UnidadMedida(nombre=nombre, simbolo=simbolo, tipo=tipo))
+                changed = True
     if changed:
         session.commit()
 

@@ -19,9 +19,10 @@ class Settings(BaseSettings):
 
     cors_origins: str = '["http://localhost:5173"]'
 
-    mp_access_token: str = "TEST-xxxx"
-    mp_public_key: str = "TEST-xxxx"
+    mp_access_token: str = ""
+    mp_public_key: str = ""
     mp_notification_url: str = ""
+    mp_webhook_secret: str = ""
 
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""

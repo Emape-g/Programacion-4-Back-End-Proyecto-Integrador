@@ -14,6 +14,14 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
 
     def get_by_id(self, record_id: int) -> Optional[Ingrediente]:
         return self.session.exec(
+            select(Ingrediente).where(
+                Ingrediente.id == record_id,
+                Ingrediente.deleted_at.is_(None),
+            )
+        ).first()
+
+    def get_by_id_including_deleted(self, record_id: int) -> Optional[Ingrediente]:
+        return self.session.exec(
             select(Ingrediente).where(Ingrediente.id == record_id)
         ).first()
 
@@ -24,7 +32,7 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         nombre: Optional[str] = None,
         orden: Literal["asc", "desc"] = "desc",
     ) -> Sequence[Ingrediente]:
-        query = select(Ingrediente)
+        query = select(Ingrediente).where(Ingrediente.deleted_at.is_(None))
         if nombre:
             query = query.where(Ingrediente.nombre.ilike(f"%{nombre}%"))
         order_fn = asc if orden == "asc" else desc
@@ -42,7 +50,7 @@ class IngredienteRepository(BaseRepository[Ingrediente]):
         ).all()
 
     def count(self, nombre: Optional[str] = None) -> int:
-        query = select(func.count(Ingrediente.id))
+        query = select(func.count(Ingrediente.id)).where(Ingrediente.deleted_at.is_(None))
         if nombre:
             query = query.where(Ingrediente.nombre.ilike(f"%{nombre}%"))
         return self.session.exec(query).one()

@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 
+from app.core.auth import require_admin
 from app.core.database import get_session
 from app.modules.forma_de_pago.schemas import (
     FormaDePagoCreate,
@@ -27,6 +28,7 @@ def get_forma_de_pago_service(
     response_model=FormaDePagoPublic,
     status_code=status.HTTP_201_CREATED,
     summary="Crear forma de pago",
+    dependencies=[Depends(require_admin)],
 )
 def create_forma_de_pago(
     data: FormaDePagoCreate,
@@ -73,6 +75,7 @@ def get_forma_de_pago(
     "/{codigo}",
     response_model=FormaDePagoPublic,
     summary="Actualizar forma de pago",
+    dependencies=[Depends(require_admin)],
 )
 def update_forma_de_pago(
     codigo: str,
@@ -86,6 +89,7 @@ def update_forma_de_pago(
     "/{codigo}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Deshabilitar forma de pago (soft delete)",
+    dependencies=[Depends(require_admin)],
 )
 def delete_forma_de_pago(
     codigo: str,

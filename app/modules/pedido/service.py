@@ -68,6 +68,14 @@ class PedidoService:
 
         return None
 
+    def _restore_stock(self, uow: PedidoUnitOfWork, pedido_id: int) -> None:
+        items = uow.detalles.get_by_pedido(pedido_id)
+        for item in items:
+            producto = uow.productos.get_by_id(item.producto_id)
+            if producto:
+                producto.stock_cantidad += item.cantidad
+                uow.productos.add(producto)
+
     def _build_read(self, pedido: Pedido) -> PedidoRead:
         return PedidoRead.model_validate(pedido)
 
@@ -78,6 +86,7 @@ class PedidoService:
 
         return PedidoDetail(
             id=pedido.id,
+            usuario_id=pedido.usuario_id,
             estado_codigo=pedido.estado_codigo,
             subtotal=pedido.subtotal,
             descuento=pedido.descuento,
@@ -204,7 +213,10 @@ class PedidoService:
         usuario_id: int | None = None, estado: str | None = None,
     ) -> PedidoList:
         with PedidoUnitOfWork(self._session) as uow:
-            if usuario_id:
+            if usuario_id and estado:
+                items = uow.pedidos.get_by_usuario_and_estado(usuario_id, estado, offset=offset, limit=limit)
+                total = uow.pedidos.count_by_usuario_and_estado(usuario_id, estado)
+            elif usuario_id:
                 items = uow.pedidos.get_by_usuario(usuario_id, offset=offset, limit=limit)
                 total = uow.pedidos.count_by_usuario(usuario_id)
             elif estado:
@@ -251,7 +263,7 @@ class PedidoService:
             permitidos = TRANSITIONS.get(estado_actual, [])
             if nuevo_estado not in permitidos:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=(
                         f"Transición inválida: {estado_actual} → {nuevo_estado}. "
                         f"Permitidas: {permitidos or 'ninguna (estado terminal)'}."
@@ -260,9 +272,12 @@ class PedidoService:
 
             if nuevo_estado == "CANCELADO" and not data.motivo:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="El campo 'motivo' es obligatorio al cancelar un pedido",
                 )
+
+            if nuevo_estado == "CANCELADO":
+                self._restore_stock(uow, pedido.id)
 
             pedido.estado_codigo = nuevo_estado
             pedido.updated_at = datetime.now(timezone.utc)
@@ -305,11 +320,12 @@ class PedidoService:
 
             if pedido.estado_codigo not in ("PENDIENTE", "CONFIRMADO"):
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="Solo se pueden cancelar pedidos en estado PENDIENTE o CONFIRMADO",
                 )
 
             estado_anterior = pedido.estado_codigo
+            self._restore_stock(uow, pedido.id)
             pedido.estado_codigo = "CANCELADO"
             pedido.updated_at = datetime.now(timezone.utc)
             uow.pedidos.add(pedido)

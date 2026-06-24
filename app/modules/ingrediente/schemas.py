@@ -14,6 +14,7 @@ class IngredienteUpdate(SQLModel):
     nombre: Optional[str] = Field(default=None, min_length=2, max_length=100)
     descripcion: Optional[str] = None
     es_alergeno: Optional[bool] = None
+
     stock_cantidad: Optional[int] = Field(default=None, ge=0)
 
 

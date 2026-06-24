@@ -181,10 +181,13 @@ class UsuarioService:
             token_hash = hash_token_sha256(refresh_token_plain)
             stored = uow.refresh_tokens.get_by_hash(token_hash)
             now = _now()
+            stored_expires = stored.expires_at if stored else None
+            if stored_expires is not None and stored_expires.tzinfo is None:
+                stored_expires = stored_expires.replace(tzinfo=timezone.utc)
             if (
                 not stored
                 or stored.revoked_at is not None
-                or stored.expires_at <= now
+                or stored_expires <= now
             ):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,

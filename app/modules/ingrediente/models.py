@@ -1,13 +1,14 @@
 # app/modules/ingrediente/models.py
+from decimal import Decimal
 from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime,timezone
 if TYPE_CHECKING:
     from app.modules.producto.models import ProductoIngrediente
+    from app.modules.unidad_medida.models import UnidadMedida
 
 
 class Ingrediente(SQLModel, table=True):
-    """Tabla ingredientes — catálogo global, no duplicado por producto."""
 
     __tablename__ = "ingrediente"
 
@@ -16,6 +17,7 @@ class Ingrediente(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None)
     es_alergeno: bool = Field(default=False)
     stock_cantidad: int = Field(default=0, ge=0, nullable=False)
+
 
     productos_link: List["ProductoIngrediente"] = Relationship(
         back_populates="ingrediente"

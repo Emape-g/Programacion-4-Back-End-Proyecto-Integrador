@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
+from app.core.auth import get_current_user
 from app.core.database import get_session
 from app.modules.detalle_pedido.service import DetallePedidoService
 from app.modules.pedido.schemas import DetallePedidoRead
@@ -21,6 +22,7 @@ def get_detalle_service(
     "/{pedido_id}/detalles",
     response_model=List[DetallePedidoRead],
     summary="Listar ítems de un pedido",
+    dependencies=[Depends(get_current_user)],
 )
 def get_detalles(
     pedido_id: int,
@@ -33,6 +35,7 @@ def get_detalles(
     "/{pedido_id}/detalles/{producto_id}",
     response_model=DetallePedidoRead,
     summary="Obtener ítem específico de un pedido",
+    dependencies=[Depends(get_current_user)],
 )
 def get_detalle(
     pedido_id: int,

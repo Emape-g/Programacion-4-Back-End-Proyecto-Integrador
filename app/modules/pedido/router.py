@@ -1,11 +1,10 @@
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
-from app.core.auth import decode_token, get_current_user, require_role
+from app.core.auth import get_current_user, require_role
 from app.core.database import get_session
-from app.core.ws_manager import ws_manager
 from app.modules.pedido.schemas import (
     AvanzarEstadoRequest,
     CrearPedidoRequest,
@@ -75,8 +74,12 @@ def get_pedido(
     detail = svc.get_by_id(pedido_id)
     roles = set(payload.get("roles") or [])
     if not roles.intersection({"ADMIN", "PEDIDOS"}):
-        with Session(svc._session.get_bind()) if hasattr(svc._session, 'get_bind') else svc._session as _:
-            pass
+        usuario_id = int(payload["uid"])
+        if detail.usuario_id != usuario_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo puedes ver tus propios pedidos",
+            )
     return detail
 
 
@@ -105,6 +108,14 @@ def get_historial(
     payload: dict = Depends(get_current_user),
     svc: PedidoService = Depends(get_pedido_service),
 ) -> List[HistorialRead]:
+    roles = set(payload.get("roles") or [])
+    if not roles.intersection({"ADMIN", "PEDIDOS"}):
+        detail = svc.get_by_id(pedido_id)
+        if detail.usuario_id != int(payload["uid"]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo puedes ver el historial de tus propios pedidos",
+            )
     return svc.get_historial(pedido_id)
 
 
@@ -122,28 +133,3 @@ async def cancelar_pedido(
     return await svc.cancelar_propio(pedido_id, usuario_id)
 
 
-@router.websocket("/ws/pedidos")
-async def ws_pedidos(websocket: WebSocket, token: str | None = None):
-    if not token:
-        await websocket.close(code=4001)
-        return
-    try:
-        payload = decode_token(token)
-    except Exception:
-        await websocket.close(code=4001)
-        return
-
-    roles = set(payload.get("roles") or [])
-    if not roles.intersection({"ADMIN", "PEDIDOS"}):
-        await websocket.close(code=4003)
-        return
-
-    await websocket.accept()
-    ws_manager.connect(websocket, "admin")
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        pass
-    finally:
-        ws_manager.disconnect(websocket, "admin")

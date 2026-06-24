@@ -103,7 +103,7 @@ def login(
         httponly=True,
         samesite="lax",
         max_age=settings.refresh_token_expire_days * 24 * 3600,
-        path="/auth/refresh",
+        path="/api/v1/auth/refresh",
     )
     return tokens
 
@@ -138,7 +138,7 @@ def refresh(
         httponly=True,
         samesite="lax",
         max_age=settings.refresh_token_expire_days * 24 * 3600,
-        path="/auth/refresh",
+        path="/api/v1/auth/refresh",
     )
     return tokens
 
@@ -157,7 +157,7 @@ def logout(
     if refresh_token:
         svc.logout(refresh_token)
     response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token", path="/auth/refresh")
+    response.delete_cookie(key="refresh_token", path="/api/v1/auth/refresh")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

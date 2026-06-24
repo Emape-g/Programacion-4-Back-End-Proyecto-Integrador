@@ -58,6 +58,7 @@ def list_productos(
     return svc.get_all(
         offset=offset, limit=limit,
         disponible=disponible, nombre=nombre,
+        categoria_id=categoria,
     )
 
 

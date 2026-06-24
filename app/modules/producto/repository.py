@@ -22,12 +22,14 @@ class ProductoRepository(BaseRepository[Producto]):
             .limit(limit)
         ).all()
 
-    def count(self, disponible: Optional[bool] = None, nombre: Optional[str] = None) -> int:
+    def count(self, disponible: Optional[bool] = None, nombre: Optional[str] = None, categoria_id: Optional[int] = None) -> int:
         query = select(func.count(Producto.id)).where(Producto.deleted_at == None)
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
         if nombre:
             query = query.where(Producto.nombre.ilike(f"%{nombre}%"))
+        if categoria_id is not None:
+            query = query.join(ProductoCategoria).where(ProductoCategoria.categoria_id == categoria_id)
         return self.session.exec(query).one()
     
     def soft_delete(self, instance: Producto) -> Producto:
@@ -36,12 +38,14 @@ class ProductoRepository(BaseRepository[Producto]):
         self.session.flush()
         return instance
 
-    def get_all_filtered(self, offset: int = 0, limit: int = 20, disponible: Optional[bool] = None, nombre: Optional[str] = None) -> Sequence[Producto]:
+    def get_all_filtered(self, offset: int = 0, limit: int = 20, disponible: Optional[bool] = None, nombre: Optional[str] = None, categoria_id: Optional[int] = None) -> Sequence[Producto]:
         query = select(Producto).where(Producto.deleted_at == None)
         if disponible is not None:
             query = query.where(Producto.disponible == disponible)
         if nombre:
             query = query.where(Producto.nombre.ilike(f"%{nombre}%"))
+        if categoria_id is not None:
+            query = query.join(ProductoCategoria).where(ProductoCategoria.categoria_id == categoria_id)
         return self.session.exec(query.offset(offset).limit(limit)).all()
 
 
