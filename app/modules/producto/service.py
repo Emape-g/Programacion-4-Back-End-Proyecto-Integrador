@@ -92,6 +92,23 @@ class ProductoService:
                 detail=f"Unidad de medida con id={unidad_id} no encontrada",
             )
 
+    def _stock_por_ingredientes(
+        self, uow: ProductoUnitOfWork, producto_id: int, fallback: int
+    ) -> int:
+        recetas = uow.producto_ingredientes.get_by_producto(producto_id)
+        stocks_posibles: list[int] = []
+
+        for receta in recetas:
+            ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
+            cantidad_necesaria = receta.cantidad
+            if not ingrediente or not cantidad_necesaria or cantidad_necesaria <= 0:
+                continue
+            stocks_posibles.append(int(ingrediente.stock_cantidad // cantidad_necesaria))
+
+        if not stocks_posibles:
+            return max(0, int(fallback or 0))
+        return max(0, min(stocks_posibles))
+
     def _build_public(
         self, uow: ProductoUnitOfWork, producto: Producto
     ) -> ProductoPublic:
@@ -103,7 +120,9 @@ class ProductoService:
             precio_base=producto.precio_base,
             unidad_venta_id=producto.unidad_venta_id,
             imagenes_url=producto.imagenes_url or [],
-            stock_cantidad=producto.stock_cantidad,
+            stock_cantidad=self._stock_por_ingredientes(
+                uow, producto.id, producto.stock_cantidad
+            ),
             disponible=producto.disponible,
             created_at=producto.created_at,
             updated_at=producto.updated_at,
@@ -137,7 +156,9 @@ class ProductoService:
             unidad_venta_id=producto.unidad_venta_id,
             unidad_venta_simbolo=unidad_venta.simbolo if unidad_venta else None,
             imagenes_url=producto.imagenes_url or [],
-            stock_cantidad=producto.stock_cantidad,
+            stock_cantidad=self._stock_por_ingredientes(
+                uow, producto.id, producto.stock_cantidad
+            ),
             disponible=producto.disponible,
             created_at=producto.created_at,
             updated_at=producto.updated_at,
@@ -152,17 +173,17 @@ class ProductoService:
             ingredientes=[
                 ProductoIngredientePublic(
                     ingrediente_id=i.ingrediente_id,
-                    nombre_ingrediente=uow.ingredientes.get_by_id(
-                        i.ingrediente_id
-                    ).nombre,
+                    nombre_ingrediente=ingrediente.nombre,
                     cantidad=i.cantidad,
                     unidad_medida_id=i.unidad_medida_id,
                     unidad_simbolo=uow.unidades.get_by_id(
                         i.unidad_medida_id
                     ).simbolo,
                     es_removible=i.es_removible,
+                    costo=i.cantidad * ingrediente.precio_unitario,
                 )
                 for i in ings
+                for ingrediente in [uow.ingredientes.get_by_id(i.ingrediente_id)]
             ],
         )
 

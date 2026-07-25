@@ -14,6 +14,10 @@ class CrearPagoRequest(BaseModel):
 
 class PagoCrearResponse(BaseModel):
     pago_id: int
+    pedido_id: int
+    mp_preference_id: Optional[str] = None
+    preference_id: Optional[str] = None
+    init_point: Optional[str] = None
     mp_payment_id: Optional[int] = None
     mp_status: Optional[str] = None
     mp_status_detail: Optional[str] = None

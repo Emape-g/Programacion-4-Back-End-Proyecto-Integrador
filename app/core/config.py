@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     mp_public_key: str = ""
     mp_notification_url: str = ""
     mp_webhook_secret: str = ""
+    mp_back_url_success: str = "http://localhost:5173/checkout/return"
+    mp_back_url_failure: str = "http://localhost:5173/checkout/return"
+    mp_back_url_pending: str = "http://localhost:5173/checkout/return"
 
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""

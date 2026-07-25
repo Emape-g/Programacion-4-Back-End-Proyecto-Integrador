@@ -292,6 +292,7 @@ class PagoService:
                 pago_id=pago.id,
                 pedido_id=pedido.id,
                 mp_preference_id=mp_info.get("preference_id"),
+                preference_id=mp_info.get("preference_id"),
                 init_point=mp_info.get("init_point"),
                 external_reference=external_reference,
                 idempotency_key=idempotency_key,
