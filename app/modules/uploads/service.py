@@ -1,23 +1,27 @@
-import cloudinary
-import cloudinary.uploader
+import os
+import uuid
+from pathlib import Path
+
 from fastapi import HTTPException, UploadFile, status
 
-from app.core.config import settings
-from app.modules.uploads.schemas import CloudinaryResponse
+from app.modules.uploads.schemas import ImagenResponse
 
 ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 
-
-def _configure_cloudinary() -> None:
-    cloudinary.config(
-        cloud_name=settings.cloudinary_cloud_name,
-        api_key=settings.cloudinary_api_key,
-        api_secret=settings.cloudinary_api_secret,
-    )
+UPLOAD_DIR = Path("static/uploads")
 
 
-async def upload_imagen(file: UploadFile, folder: str = "productos") -> CloudinaryResponse:
+def _ext_from_mime(mime: str) -> str:
+    return {
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }[mime]
+
+
+async def upload_imagen(file: UploadFile, folder: str = "productos") -> ImagenResponse:
     if file.content_type not in ALLOWED_MIME:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -32,31 +36,20 @@ async def upload_imagen(file: UploadFile, folder: str = "productos") -> Cloudina
             detail=f"Archivo demasiado grande. Máximo: {MAX_SIZE // (1024*1024)} MB",
         )
 
-    _configure_cloudinary()
+    dest_dir = UPLOAD_DIR / folder
+    dest_dir.mkdir(parents=True, exist_ok=True)
 
-    result = cloudinary.uploader.upload(
-        contents,
-        folder=f"foodstore/{folder}",
-        resource_type="image",
-        overwrite=False,
-        unique_filename=True,
-    )
+    ext = _ext_from_mime(file.content_type)
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = dest_dir / filename
 
-    return CloudinaryResponse(
-        secure_url=result["secure_url"],
-        public_id=result["public_id"],
-        width=result["width"],
-        height=result["height"],
-        format=result["format"],
-        resource_type=result["resource_type"],
-    )
+    filepath.write_bytes(contents)
+
+    url = f"/static/uploads/{folder}/{filename}"
+    return ImagenResponse(url=url, filename=filename)
 
 
-def delete_imagen(public_id: str) -> None:
-    _configure_cloudinary()
-    result = cloudinary.uploader.destroy(public_id, resource_type="image")
-    if result.get("result") not in ("ok", "not found"):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error eliminando imagen: {result}",
-        )
+def delete_imagen(folder: str, filename: str) -> None:
+    filepath = UPLOAD_DIR / folder / filename
+    if filepath.exists():
+        os.remove(filepath)
