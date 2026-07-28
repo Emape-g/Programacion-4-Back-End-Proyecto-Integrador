@@ -59,6 +59,10 @@ class PagoRead(SQLModel):
 
 class PedidoRead(SQLModel):
     id: int
+    usuario_id: int
+    usuario_nombre: Optional[str] = None
+    usuario_apellido: Optional[str] = None
+    forma_pago_codigo: Optional[str] = None
     estado_codigo: str
     subtotal: Decimal
     descuento: Decimal
@@ -72,6 +76,9 @@ class PedidoRead(SQLModel):
 class PedidoDetail(SQLModel):
     id: int
     usuario_id: int
+    usuario_nombre: Optional[str] = None
+    usuario_apellido: Optional[str] = None
+    forma_pago_codigo: Optional[str] = None
     estado_codigo: str
     subtotal: Decimal
     descuento: Decimal

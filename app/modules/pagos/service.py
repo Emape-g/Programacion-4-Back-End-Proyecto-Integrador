@@ -49,15 +49,6 @@ class PagoService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Producto id={item.producto_id} no encontrado",
                 )
-            if producto.stock_cantidad < item.cantidad:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Stock insuficiente para '{producto.nombre}' "
-                           f"(disponible: {producto.stock_cantidad}, pedido: {item.cantidad})",
-                )
-            producto.stock_cantidad -= item.cantidad
-            uow.productos.add(producto)
-
             for receta in uow.producto_ingredientes.get_by_producto(item.producto_id):
                 ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
                 if not ingrediente:
@@ -312,14 +303,16 @@ class PagoService:
 
         topic = data.get("type") or data.get("topic")
         data_id = data.get("data_id") or (data.get("data") or {}).get("id")
-        payment_id = data.get("id")
+        top_level_id = data.get("id")
 
         if not data_id and query_params:
             data_id = query_params.get("data.id") or query_params.get("id")
         if not topic and query_params:
             topic = query_params.get("topic") or query_params.get("type")
 
-        pago_mp_id = payment_id or data_id
+        # En webhooks v2 de MP, `data.id` es el payment_id real;
+        # el `id` top-level es el id del evento de notificación.
+        pago_mp_id = data_id or top_level_id
 
         if not pago_mp_id:
             return {"status": "ignored", "reason": "No payment ID"}
@@ -414,7 +407,10 @@ class PagoService:
             }
 
         except Exception as e:
-            logger.exception("Error procesando webhook MP")
+            logger.exception(
+                "Error procesando webhook MP pago_mp_id=%s topic=%s body=%s qs=%s",
+                pago_mp_id, topic, data, query_params or {},
+            )
             return {"status": "error", "reason": str(e)}
 
     async def confirmar_pago(self, pedido_id: int,

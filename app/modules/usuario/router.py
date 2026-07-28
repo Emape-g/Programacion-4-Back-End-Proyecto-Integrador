@@ -64,7 +64,6 @@ def register(
     request: Request,
     svc: UsuarioService = Depends(get_usuario_service),
 ) -> UserResponse:
-    auth_rate_limiter.check(request)
     usuario = svc.register(data)
     return UserResponse(
         id=usuario.id,

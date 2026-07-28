@@ -73,11 +73,6 @@ class PedidoService:
     def _restore_stock(self, uow: PedidoUnitOfWork, pedido_id: int) -> None:
         items = uow.detalles.get_by_pedido(pedido_id)
         for item in items:
-            producto = uow.productos.get_by_id(item.producto_id)
-            if producto:
-                producto.stock_cantidad += item.cantidad
-                uow.productos.add(producto)
-
             for receta in uow.producto_ingredientes.get_by_producto(item.producto_id):
                 ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
                 if ingrediente:
@@ -93,15 +88,6 @@ class PedidoService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Producto id={item.producto_id} no encontrado",
                 )
-            if producto.stock_cantidad < item.cantidad:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Stock insuficiente para '{producto.nombre}' "
-                           f"(disponible: {producto.stock_cantidad}, pedido: {item.cantidad})",
-                )
-            producto.stock_cantidad -= item.cantidad
-            uow.productos.add(producto)
-
             for receta in uow.producto_ingredientes.get_by_producto(item.producto_id):
                 ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
                 if not ingrediente:
@@ -119,17 +105,41 @@ class PedidoService:
                 ingrediente.stock_cantidad -= cantidad_necesaria
                 uow.ingredientes.add(ingrediente)
 
+    def _load_usuario_nombres(self, pedido: Pedido) -> tuple[str | None, str | None]:
+        from app.modules.usuario.models import Usuario
+        u = self._session.get(Usuario, pedido.usuario_id)
+        if not u:
+            return None, None
+        return u.nombre, u.apellido
+
     def _build_read(self, pedido: Pedido) -> PedidoRead:
-        return PedidoRead.model_validate(pedido)
+        nombre, apellido = self._load_usuario_nombres(pedido)
+        return PedidoRead(
+            id=pedido.id,
+            usuario_id=pedido.usuario_id,
+            usuario_nombre=nombre,
+            usuario_apellido=apellido,
+            forma_pago_codigo=pedido.forma_pago_codigo,
+            estado_codigo=pedido.estado_codigo,
+            subtotal=pedido.subtotal,
+            descuento=pedido.descuento,
+            costo_envio=pedido.costo_envio,
+            total=pedido.total,
+            created_at=pedido.created_at,
+        )
 
     def _build_detail(self, uow: PedidoUnitOfWork, pedido: Pedido) -> PedidoDetail:
         items = uow.detalles.get_by_pedido(pedido.id)
         historial = uow.historial.get_by_pedido(pedido.id)
         pago_obj = uow.pagos.get_by_pedido(pedido.id)
+        nombre, apellido = self._load_usuario_nombres(pedido)
 
         return PedidoDetail(
             id=pedido.id,
             usuario_id=pedido.usuario_id,
+            usuario_nombre=nombre,
+            usuario_apellido=apellido,
+            forma_pago_codigo=pedido.forma_pago_codigo,
             estado_codigo=pedido.estado_codigo,
             subtotal=pedido.subtotal,
             descuento=pedido.descuento,
@@ -176,12 +186,16 @@ class PedidoService:
                         status_code=status.HTTP_409_CONFLICT,
                         detail=f"Producto '{producto.nombre}' no está disponible",
                     )
-                if producto.stock_cantidad < item.cantidad:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Stock insuficiente para '{producto.nombre}' "
-                               f"(disponible: {producto.stock_cantidad}, pedido: {item.cantidad})",
-                    )
+                recetas = uow.producto_ingredientes.get_by_producto(item.producto_id)
+                for receta in recetas:
+                    ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
+                    cantidad_necesaria = receta.cantidad * item.cantidad
+                    if not ingrediente or ingrediente.stock_cantidad < cantidad_necesaria:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Stock insuficiente para '{producto.nombre}' "
+                                   f"(faltan ingredientes para {item.cantidad} unidad/es)",
+                        )
 
                 precio = producto.precio_base
                 sub = precio * item.cantidad
@@ -268,7 +282,7 @@ class PedidoService:
 
             page = (offset // limit) + 1 if limit else 1
             return PedidoList(
-                items=[PedidoRead.model_validate(p) for p in items],
+                items=[self._build_read(p) for p in items],
                 total=total,
                 page=page,
                 size=limit,

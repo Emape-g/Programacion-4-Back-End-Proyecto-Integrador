@@ -101,7 +101,10 @@ class ProductoService:
         for receta in recetas:
             ingrediente = uow.ingredientes.get_by_id(receta.ingrediente_id)
             cantidad_necesaria = receta.cantidad
-            if not ingrediente or not cantidad_necesaria or cantidad_necesaria <= 0:
+            if not cantidad_necesaria or cantidad_necesaria <= 0:
+                continue
+            if not ingrediente:
+                stocks_posibles.append(0)
                 continue
             stocks_posibles.append(int(ingrediente.stock_cantidad // cantidad_necesaria))
 
@@ -113,6 +116,16 @@ class ProductoService:
         self, uow: ProductoUnitOfWork, producto: Producto
     ) -> ProductoPublic:
         cats = uow.producto_categorias.get_by_producto(producto.id)
+        categorias_public = []
+        for c in cats:
+            cat = uow.categorias.get_by_id(c.categoria_id)
+            categorias_public.append(
+                ProductoCategoriaPublic(
+                    categoria_id=c.categoria_id,
+                    nombre_categoria=cat.nombre if cat else f"(categoria #{c.categoria_id} eliminada)",
+                    es_principal=c.es_principal,
+                )
+            )
         return ProductoPublic(
             id=producto.id,
             nombre=producto.nombre,
@@ -126,19 +139,13 @@ class ProductoService:
             disponible=producto.disponible,
             created_at=producto.created_at,
             updated_at=producto.updated_at,
-            categorias=[
-                ProductoCategoriaPublic(
-                    categoria_id=c.categoria_id,
-                    nombre_categoria=uow.categorias.get_by_id(c.categoria_id).nombre,
-                    es_principal=c.es_principal,
-                )
-                for c in cats
-            ],
+            categorias=categorias_public,
         )
 
     def _build_detalle(
         self, uow: ProductoUnitOfWork, producto: Producto
     ) -> ProductoDetalle:
+        from decimal import Decimal
         cats = uow.producto_categorias.get_by_producto(producto.id)
         ings = uow.producto_ingredientes.get_by_producto(producto.id)
 
@@ -147,6 +154,33 @@ class ProductoService:
             if producto.unidad_venta_id
             else None
         )
+
+        categorias_public = []
+        for c in cats:
+            cat = uow.categorias.get_by_id(c.categoria_id)
+            categorias_public.append(
+                ProductoCategoriaPublic(
+                    categoria_id=c.categoria_id,
+                    nombre_categoria=cat.nombre if cat else f"(categoria #{c.categoria_id} eliminada)",
+                    es_principal=c.es_principal,
+                )
+            )
+
+        ingredientes_public = []
+        for i in ings:
+            ingrediente = uow.ingredientes.get_by_id_including_deleted(i.ingrediente_id)
+            unidad = uow.unidades.get_by_id(i.unidad_medida_id)
+            ingredientes_public.append(
+                ProductoIngredientePublic(
+                    ingrediente_id=i.ingrediente_id,
+                    nombre_ingrediente=(ingrediente.nombre if ingrediente else f"(ingrediente #{i.ingrediente_id} eliminado)"),
+                    cantidad=i.cantidad,
+                    unidad_medida_id=i.unidad_medida_id,
+                    unidad_simbolo=unidad.simbolo if unidad else "",
+                    es_removible=i.es_removible,
+                    costo=i.cantidad * ingrediente.precio_unitario if ingrediente else Decimal("0"),
+                )
+            )
 
         return ProductoDetalle(
             id=producto.id,
@@ -162,29 +196,8 @@ class ProductoService:
             disponible=producto.disponible,
             created_at=producto.created_at,
             updated_at=producto.updated_at,
-            categorias=[
-                ProductoCategoriaPublic(
-                    categoria_id=c.categoria_id,
-                    nombre_categoria=uow.categorias.get_by_id(c.categoria_id).nombre,
-                    es_principal=c.es_principal,
-                )
-                for c in cats
-            ],
-            ingredientes=[
-                ProductoIngredientePublic(
-                    ingrediente_id=i.ingrediente_id,
-                    nombre_ingrediente=ingrediente.nombre,
-                    cantidad=i.cantidad,
-                    unidad_medida_id=i.unidad_medida_id,
-                    unidad_simbolo=uow.unidades.get_by_id(
-                        i.unidad_medida_id
-                    ).simbolo,
-                    es_removible=i.es_removible,
-                    costo=i.cantidad * ingrediente.precio_unitario,
-                )
-                for i in ings
-                for ingrediente in [uow.ingredientes.get_by_id(i.ingrediente_id)]
-            ],
+            categorias=categorias_public,
+            ingredientes=ingredientes_public,
         )
 
     # ── Casos de uso ──────────────────────────────────────────────────────────
